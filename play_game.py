@@ -44,11 +44,11 @@ def main():
             winner = env.get_winner()
             if env.render_mode == "console":
                 if winner == 1:
-                    print("Player 1 wins! 🎉")
+                    print("Player 1 wins!")
                 elif winner == -1:
-                    print("Player 2 wins! 🤖")
+                    print("Player 2 wins!")
                 else:
-                    print("It's a draw! 🤝")
+                    print("It's a draw!")
                 break
             elif env.render_mode == "gui":
                 show_results(screen, winner)
