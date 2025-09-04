@@ -16,10 +16,8 @@ def run_match(agent1_class, agent2_class, num_games=100):
 
     for game_index in range(num_games):
         env = Connect4Env(render_mode=None, first_player=1)
-        deterministicF = False
-        deterministicT = False
-        agent1 = agent1_class(env, deterministic=deterministicF)
-        agent2 = agent2_class(env, deterministic=deterministicF)
+        agent1 = agent1_class(env)
+        agent2 = agent2_class(env)
 
         done = False
         while not done:
@@ -40,19 +38,20 @@ def run_match(agent1_class, agent2_class, num_games=100):
     return stats, agent1.getName(), agent2.getName()
 
 def main():
-    # 🔁 Sostituisci qui gli agenti da testare
-    agent1_class = PPOAgent
-    agent2_class = DQNAgent
+    # Sostituisci agenti da testare
+    agent1_class = DQNAgent
+    #agent2_class = RuleBasedL2Agent
+    agent2_class = RandomAgent
 
     num_games = 200
     stats, agent1_name, agent2_name = run_match(agent1_class, agent2_class, num_games)
 
-    print(f"\n🎯 Risultati su {num_games} partite:")
+    print(f"\nRisultati su {num_games} partite:")
     print(f"{agent1_name} (Red) vittorie: {stats['agent1_wins']}")
     print(f"{agent2_name} (Yellow) vittorie: {stats['agent2_wins']}")
     print(f"Pareggi: {stats['draws']}")
 
-    # 📊 Visualizza i grafici
+    # Visualizza i grafici
     plot_win_rates_and_trends(stats, agent1_name, agent2_name)
 
 if __name__ == "__main__":

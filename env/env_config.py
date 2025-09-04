@@ -9,4 +9,4 @@ REWARDS = {
     "valid_move": 0,
 }
 
-RENDER_MODE = ["gui", "console"]
+RENDER_MODE = "gui"   # oppure "console"

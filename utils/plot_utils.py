@@ -14,7 +14,7 @@ def plot_win_rates_and_trends(results, agent1_name, agent2_name):
 
     fig, axs = plt.subplots(1, 2, figsize=(12, 5))
 
-    # 📊 Grafico 1: Tasso di vittoria
+    # Grafico 1: Tasso di vittoria
     bars = axs[0].bar(win_labels, win_values, color=["red", "gold", "gray"])
     axs[0].set_title("Tasso di vittoria")
     axs[0].set_ylabel("Numero di vittorie")
@@ -24,7 +24,7 @@ def plot_win_rates_and_trends(results, agent1_name, agent2_name):
         axs[0].text(bar.get_x() + bar.get_width() / 2, height + 0.5, str(height),
                     ha='center', va='bottom', fontsize=10)
 
-    # 📈 Grafico 2: Andamento delle partite
+    # Grafico 2: Andamento delle partite
     axs[1].plot(games, cumulative_agent1, label=f"{agent1_name} wins", color="red")
     axs[1].plot(games, cumulative_agent2, label=f"{agent2_name} wins", color="gold")
     axs[1].plot(games, cumulative_draws, label="Draws", color="gray")
