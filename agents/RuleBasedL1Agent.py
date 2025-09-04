@@ -16,10 +16,7 @@ class RuleBasedL1Agent(Agent):
             col = simulated_env.last_move_col
 
             if simulated_env.check_win_around_last_move(row, col):
-                return move  # 🏆 Mossa vincente trovata
+                return move  # Mossa vincente trovata
 
-        # 🎲 Nessuna mossa vincente, scegli casualmente
+        # Nessuna mossa vincente, scegli casualmente
         return np.random.choice(valid_moves)
-
-    def getName(self):
-        return self.name
