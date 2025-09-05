@@ -53,6 +53,3 @@ class DQNAgent(Agent):
         
         
         return action
-
-    def getName(self):
-        return self.name

@@ -1,51 +1,3 @@
-# import numpy as np
-# import torch
-# from .Agent import Agent
-# from stable_baselines3 import PPO
-# from .rl_config import *
-
-# class PPOAgent(Agent):
-#     def __init__(self, env, deterministic=True, device="auto"):
-#         """
-#         env: istanza di Connect4Env (o compatibile)
-#         deterministic: True = azioni greedy, False = stocastiche
-#         device: "auto", "cpu", "cuda", o indice GPU
-#         """
-#         super().__init__(env)
-#         self.name = "PPO"
-#         self.deterministic = deterministic
-#         self.model = PPO.load(MODEL_PATH_PPO, device=device)
-
-#     def choose_action(self):
-#         valid_moves = self.env.get_valid_actions()
-#         if not valid_moves:
-#             raise Exception("No valid moves remaining.")
-
-#         # Prepara osservazione in float32 e batch
-#         obs = self.env.get_board().astype(np.float32)
-#         obs = np.expand_dims(obs, axis=0)
-
-#         # Converti in tensore Torch sul device corretto
-#         obs_tensor = torch.as_tensor(obs, device=self.model.device)
-
-#         # Ottieni distribuzione delle azioni (logits) dalla policy di PPO
-#         with torch.no_grad():
-#             logits = self.model.policy(obs_tensor)[0]  # il primo elemento è l'azione grezza/policy output
-
-#         q_values = logits.cpu().numpy().flatten()
-
-#         # Maschera mosse illegali
-#         mask = np.full_like(q_values, fill_value=-np.inf, dtype=np.float32)
-#         mask[valid_moves] = q_values[valid_moves]
-
-#         action = int(np.argmax(mask))
-#         print(f"Azione scelta (PPO): {action}")
-
-#         return action
-
-#     def getName(self):
-#         return self.name
-
 import numpy as np
 import torch
 from .Agent import Agent
@@ -114,6 +66,3 @@ class PPOAgent(Agent):
         print(f"Azione scelta 2 (PPO .predict): {action2}")
 
         return action
-
-    def getName(self):
-        return self.name

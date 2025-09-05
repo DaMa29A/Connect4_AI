@@ -1,1 +1,8 @@
 /venv
+/todo.txt
+/agents/__pycache__
+/env/__pycache__
+/gui/__pycache__
+/models
+/logs_dqn
+/Documents
