@@ -1,56 +1,72 @@
-import gymnasium
-from gymnasium import spaces
 import numpy as np
+import gymnasium as gym
+from gymnasium import spaces
 from colorama import Fore, Style
 from gui.gui_rend import render_gui
-from env.env_config import *
+from env.env_config import ROWS_COUNT, COLUMNS_COUNT, REWARDS
 
-class Connect4Env(gymnasium.Env):
-    def __init__(self, opponent=None, render_mode=None, first_player=None):
+
+class Connect4Env(gym.Env):
+    metadata = {"render_modes": ["console", "gui"]}
+
+    def __init__(self, opponent=None, render_mode=None, first_player=1):
+        super().__init__()
         self.opponent = opponent
-        self.first_player = first_player if first_player is not None else 1
-        self.next_player_to_play = 1
+        self.first_player = first_player
+        self.next_player_to_play = first_player
         self.render_mode = render_mode
 
+        # Azioni = colonne disponibili
         self.action_space = spaces.Discrete(COLUMNS_COUNT)
-        
-        # TODO: MODIFICA
-        #self.observation_space = spaces.Box(low=-1, high=1, shape=(ROWS_COUNT, COLUMNS_COUNT), dtype=np.int8)
-        self.observation_space = spaces.Box(low=-1, high=1, shape=(ROWS_COUNT, COLUMNS_COUNT), dtype=np.float32)
-        
+        # Osservazioni = griglia 6x7
+        self.observation_space = spaces.Box(
+            low=-1, high=1, shape=(ROWS_COUNT, COLUMNS_COUNT), dtype=np.float32
+        )
+
         self.reset()
+
+    # ----------------------
+    # Utility funzioni base
+    # ----------------------
 
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)
-        # TODO: MODIFICA
-        #self.board = np.zeros((ROWS_COUNT, COLUMNS_COUNT), dtype=np.int8)
         self.board = np.zeros((ROWS_COUNT, COLUMNS_COUNT), dtype=np.float32)
         self.next_player_to_play = self.first_player
         self.last_move_row = None
         self.last_move_col = None
         self.winner = None
-        
-        # TODO: MODIFICA
-        #return self.board, {}
-        return self.board.astype(np.float32), {}
+        return self.board.copy(), {"action_mask": self.get_action_mask()}
 
+    def is_action_valid(self, action):
+        return 0 <= action < COLUMNS_COUNT and not self.is_column_full(action)
+    
     def is_column_full(self, column):
         return self.board[0, column] != 0
 
     def board_is_full(self):
         return np.all(self.board != 0)
 
-    def is_action_valid(self, action):
-        return 0 <= action < COLUMNS_COUNT and not self.is_column_full(action)
+    def get_valid_actions(self):
+        return [c for c in range(COLUMNS_COUNT) if not self.is_column_full(c)]
+
+    """
+    Crea una maschera binaria che indica quali colonne sono ancora disponibili per giocare.
+    1 = colonna valida, 0 = invalida.
+    """
+    def get_action_mask(self):
+        mask = np.zeros(COLUMNS_COUNT, dtype=np.int8)
+        for c in self.get_valid_actions():
+            mask[c] = 1
+        return mask
 
     def switch_player(self):
-        self.next_player_to_play = -1 * self.next_player_to_play
-
-    def get_valid_actions(self):
-        return [col for col in range(COLUMNS_COUNT) if not self.is_column_full(col)]
+        self.next_player_to_play = -self.next_player_to_play
 
     def clone(self):
-        new_env = Connect4Env(opponent=self.opponent, render_mode=self.render_mode, first_player=self.first_player)
+        new_env = Connect4Env(
+            opponent=self.opponent, render_mode=self.render_mode, first_player=self.first_player
+        )
         new_env.next_player_to_play = self.next_player_to_play
         new_env.board = self.board.copy()
         new_env.last_move_row = self.last_move_row
@@ -58,35 +74,104 @@ class Connect4Env(gymnasium.Env):
         new_env.winner = self.winner
         return new_env
 
-    def check_win_around_last_move(self, row, col):
-        player = self.board[row, col]
+    def get_board(self):
+        return self.board.copy()
+    
+    
+    # ----------------------
+    # Controllo vittoria
+    # ----------------------
+    
+    """
+    Conta se ci sono target_count pedine consecutive del player attorno alla posizione (row, col).
+    """
+    def count_consecutive_pieces(self, row, col, target_count, player):
         directions = [(1, 0), (0, 1), (1, 1), (1, -1)]
+
         for dr, dc in directions:
-            count = 0
-            for step in range(-3, 4):
+            count = 1 if self.board[row, col] == player else 0  # Include la pedina se è del player
+
+            # Verso avanti
+            for step in range(1, target_count):
                 r, c = row + step * dr, col + step * dc
                 if 0 <= r < ROWS_COUNT and 0 <= c < COLUMNS_COUNT and self.board[r, c] == player:
                     count += 1
-                    if count == 4:
-                        return True
                 else:
-                    count = 0
+                    break
+
+            # Verso indietro
+            for step in range(1, target_count):
+                r, c = row - step * dr, col - step * dc
+                if 0 <= r < ROWS_COUNT and 0 <= c < COLUMNS_COUNT and self.board[r, c] == player:
+                    count += 1
+                else:
+                    break
+
+            if count >= target_count:
+                return True
+
         return False
 
-    def is_finish(self):
+    # Quando ci sono 4 pedine consecutive restituisce True
+    def check_win_around_last_move(self, row, col):
+        player = self.board[row, col]
+        return self.count_consecutive_pieces(row, col, target_count=4, player=player)
+
+    def is_finish(self): 
+        # reset winner
         self.winner = None
+        # Se non è stata ancora fatta alcuna mossa, non può esserci una vittoria o pareggio
         if self.last_move_row is None or self.last_move_col is None:
             return False
+        # Controlla se l’ultima mossa ha causato una vittoria
         if self.check_win_around_last_move(self.last_move_row, self.last_move_col):
             self.winner = self.board[self.last_move_row, self.last_move_col]
             return True
+        # Se board piena e nessuno ha vinto, pareggio
         if self.board_is_full():
             self.winner = 0
             return True
+        # Se nessuna delle condizioni sopra è vera, la partita continua
         return False
 
     def get_winner(self):
         return self.winner
+
+    """Controlla se la mossa 
+        - ha bloccato una tripla dell'avversario
+    [player] rappresenta il giocatore che sta facendo la mossa difensiva
+    """
+    def is_defensive_move(self, row, col, player):
+        opponent = -player
+
+        # La cella deve essere appena occupata dal player
+        if self.board[row, col] != player:
+            return False
+
+        # Simula che l'avversario giochi lì
+        simulated_env = self.clone()
+        simulated_env.board[row, col] = opponent
+
+        # Se l'avversario avrebbe fatto 4 in fila → la mossa ha bloccato
+        return simulated_env.count_consecutive_pieces(row, col, target_count=4, player=opponent)
+
+    """
+        Controlla se l'avversario ha una triple potenziale da completare.
+    """
+    def has_opponent_threat(self, player):
+        opponent = -player
+        for r in range(ROWS_COUNT):
+            for c in range(COLUMNS_COUNT):
+                if self.board[r, c] == 0:
+                    simulated_env = self.clone()
+                    simulated_env.board[r, c] = opponent
+                    if simulated_env.count_consecutive_pieces(r, c, target_count=4, player=opponent):
+                        return True
+        return False
+
+    # ----------------------
+    # Gestione mosse
+    # ----------------------
 
     def play_action(self, action):
         for i in range(ROWS_COUNT - 1, -1, -1):
@@ -97,32 +182,34 @@ class Connect4Env(gymnasium.Env):
                 return
 
     def step(self, action, play_opponent=True):
-        # Salva chi sta giocando la mossa
-        current_player = self.next_player_to_play
+        # Assicurati che action sia int
+        action = int(action)
 
-        # Assicurati che action sia un int
-        action = action.item() if isinstance(action, np.ndarray) else action
-
-        # Ottieni le mosse valide
+        # Azioni valide
         valid_moves = self.get_valid_actions()
         if not valid_moves:
-            # Nessuna mossa valida → partita finita in pareggio
             self.winner = 0
-            return self.board.copy().astype(np.float32), REWARDS["draw"], True, False, {}
+            return self.board.copy(), REWARDS["draw"], True, False, {
+                "action_mask": self.get_action_mask()
+            }
 
-        # Se l'azione scelta non è valida, sostituiscila con una valida random
         if action not in valid_moves:
-            print(f"Mossa invalida: {action}. Sostituita con una mossa valida casuale.")
-            action = np.random.choice(valid_moves)
+            # Penalizziamo mosse invalide (solo training)
+            print(f"Invalid action attempted: {action}")
+            return self.board.copy(), REWARDS["invalid"], False, False, {
+                "action_mask": self.get_action_mask()
+            }
+
+        # Giocatore attuale
+        current_player = self.next_player_to_play
 
         # Applica la mossa
         self.play_action(action)
 
-        # Controlla se la partita è finita
+        # Controlla fine partita
         is_finish = self.is_finish()
         winner = self.get_winner()
 
-        # Calcola reward basato sul giocatore che ha fatto la mossa
         if is_finish:
             if winner == current_player:
                 reward = REWARDS["win"]
@@ -136,95 +223,28 @@ class Connect4Env(gymnasium.Env):
         # Cambia turno
         self.switch_player()
 
-        # Se la partita è finita, termina
         if is_finish:
-            return self.board.copy().astype(np.float32), reward, True, False, {}
+            return self.board.copy(), reward, True, False, {"action_mask": self.get_action_mask()}
 
-        # Gioca turno avversario se previsto
+        # Opponente (se c’è e siamo in gioco normale, non training)
         if play_opponent and self.opponent is not None:
             opponent_action = self.opponent.choose_action()
             obs, opp_reward, done, trunc, info = self.step(opponent_action, play_opponent=False)
-            # Inverti il reward per l’agente principale
             return obs, -opp_reward, done, trunc, info
 
-        return self.board.copy().astype(np.float32), reward, False, False, {}
+        return self.board.copy(), reward, False, False, {"action_mask": self.get_action_mask()}
 
-
-
-
-    def check_three_effect(self, row, col, player, check_opponent=False):
-        """
-        Controlla se la mossa appena effettuata ha:
-        - creato una triple proprie (check_opponent=False)
-        - bloccato una triple dell'avversario (check_opponent=True)
-        
-        row, col: coordinate dell'ultima mossa
-        player: ID del giocatore che ha fatto la mossa
-        check_opponent: se True, verifica triple avversarie bloccate
-        """
-        opponent = -player
-        directions = [(1,0), (0,1), (1,1), (1,-1)]
-
-        for dr, dc in directions:
-            count = 1 if not check_opponent else 0
-            empty_spaces = 0
-
-            # avanti
-            for step in range(1, 3 if not check_opponent else 4):
-                r, c = row + dr*step, col + dc*step
-                if 0 <= r < ROWS_COUNT and 0 <= c < COLUMNS_COUNT:
-                    cell = self.board[r, c]
-                    if check_opponent:
-                        if cell == opponent:
-                            count += 1
-                        elif cell == 0:
-                            empty_spaces += 1
-                            break
-                        else:
-                            break
-                    else:
-                        if cell == player:
-                            count += 1
-                        else:
-                            break
-                else:
-                    break
-
-            # indietro
-            for step in range(1, 3 if not check_opponent else 4):
-                r, c = row - dr*step, col - dc*step
-                if 0 <= r < ROWS_COUNT and 0 <= c < COLUMNS_COUNT:
-                    cell = self.board[r, c]
-                    if check_opponent:
-                        if cell == opponent:
-                            count += 1
-                        elif cell == 0:
-                            empty_spaces += 1
-                            break
-                        else:
-                            break
-                    else:
-                        if cell == player:
-                            count += 1
-                        else:
-                            break
-                else:
-                    break
-
-            # Verifica condizione triple
-            if (not check_opponent and count == 3) or (check_opponent and count == 2 and empty_spaces > 0):
-                return True
-
-        return False
-
-    def get_board(self):
-        return self.board.copy()
-
+    # ----------------------
+    # Rendering
+    # ----------------------
+    
     def render(self, screen=None):
         if self.render_mode == "console":
-            self.render_console_2()
+            self.render_console()
         elif self.render_mode == "gui" and screen is not None:
             render_gui(screen, self.get_board())
+        else:
+            pass
 
     def render_console(self):
         print("\nCurrent board:")
@@ -241,6 +261,3 @@ class Connect4Env(gymnasium.Env):
         print("‾" * (COLUMNS_COUNT * 4 - 1))
         print("   ".join(str(i) for i in range(COLUMNS_COUNT)))
         print()
-    
-    def render_console_2(self):
-        print(self.board)

@@ -1,6 +1,7 @@
 import numpy as np
 from .Agent import Agent
 
+# Un agente che se può vincere con una mossa, la fa; altrimenti, sceglie una mossa valida a caso.
 class RuleBasedL1Agent(Agent):
     def __init__(self, env):
         super().__init__(env)

@@ -1,10 +1,10 @@
-from env.Connect4Env2 import Connect4Env
+from env.Connect4Env import Connect4Env
 from agents.HumanAgent import HumanAgent
 from agents.RandomAgent import RandomAgent
 from agents.RuleBasedL1Agent import RuleBasedL1Agent
 from agents.RuleBasedL2Agent import RuleBasedL2Agent
-from agents.DQNAgent2 import DQNAgent
-from agents.PPOAgent2 import PPOAgent
+from agents.DQNAgent import DQNAgent
+from agents.PPOAgent import PPOAgent
 from gui.gui_rend import start_gui, show_results
 from env.env_config import RENDER_MODE
 
@@ -12,7 +12,7 @@ from env.env_config import RENDER_MODE
 def main():
     env = Connect4Env(render_mode=RENDER_MODE) # render_mode can be "console" or "gui"
 
-    agent1 = HumanAgent(env)            # Player 1 (X)
+    agent1 = HumanAgent(env)         # Player 1 (X)
     agent2 = DQNAgent(env)           # Player 2 (O)
 
     print("Welcome to Connect4!")

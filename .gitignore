@@ -4,5 +4,5 @@
 /env/__pycache__
 /gui/__pycache__
 /models
-/logs_dqn
+/logs
 /Documents
