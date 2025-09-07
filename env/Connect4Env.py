@@ -179,32 +179,117 @@ class Connect4Env(gym.Env):
         return False
 
     
-    def is_offensive_move(self, row, col, player):
-        """
-        Verifica se la mossa ha creato una tripletta sfruttabile (con almeno un'estremità libera)
-        o una quadrupla (vittoria).
-        """
-        # Controllo quadrupla diretta
-        if self.count_consecutive_pieces(row, col, target_count=4, player=player):
-            return True
+    # def is_offensive_move(self, row, col, player):
+    #     """
+    #     Verifica se la mossa ha creato una tripletta sfruttabile (con almeno un'estremità libera)
+    #     o una quadrupla (vittoria).
+    #     """
+    #     # Controllo quadrupla diretta
+    #     if self.count_consecutive_pieces(row, col, target_count=4, player=player):
+    #         return True
 
-        # Controllo tripletta sfruttabile
-        if self.count_consecutive_pieces(row, col, target_count=3, player=player):
-            directions = [(1, 0), (0, 1), (1, 1), (1, -1)]
-            for dr, dc in directions:
-                for sign in [-1, 1]:
-                    rr = row + sign * dr
-                    cc = col + sign * dc
-                    if 0 <= rr < ROWS_COUNT and 0 <= cc < COLUMNS_COUNT:
-                        if self.board[rr][cc] == 0:
-                            return True  # almeno un'estremità libera
-        return False
+    #     # Controllo tripletta sfruttabile
+    #     if self.count_consecutive_pieces(row, col, target_count=3, player=player):
+    #         directions = [(1, 0), (0, 1), (1, 1), (1, -1)]
+    #         for dr, dc in directions:
+    #             for sign in [-1, 1]:
+    #                 rr = row + sign * dr
+    #                 cc = col + sign * dc
+    #                 if 0 <= rr < ROWS_COUNT and 0 <= cc < COLUMNS_COUNT:
+    #                     if self.board[rr][cc] == 0:
+    #                         return True  # almeno un'estremità libera
+    #     return False
 
     
+    # def has_offensive_threat(self, player):
+    #     """
+    #     Verifica se il giocatore ha una mossa che può creare una tripletta sfruttabile o una quadrupla.
+    #     Considera solo celle libere che sono effettivamente giocabili (prima libera nella colonna).
+    #     """
+    #     for c in range(COLUMNS_COUNT):
+    #         r = self.get_first_empty_row(c)
+    #         if r is None:
+    #             continue  # colonna piena
+
+    #         simulated_env = self.clone()
+    #         simulated_env.board[r, c] = player
+    #         simulated_env.last_move_row = r
+    #         simulated_env.last_move_col = c
+
+    #         # Verifica quadrupla (vittoria)
+    #         if simulated_env.count_consecutive_pieces(r, c, target_count=4, player=player):
+    #             return True
+
+    #         # Verifica tripletta con almeno un'estremità libera
+    #         if simulated_env.count_consecutive_pieces(r, c, target_count=3, player=player):
+    #             directions = [(1, 0), (0, 1), (1, 1), (1, -1)]
+    #             for dr, dc in directions:
+    #                 for sign in [-1, 1]:
+    #                     rr = r + sign * dr
+    #                     cc = c + sign * dc
+    #                     if 0 <= rr < ROWS_COUNT and 0 <= cc < COLUMNS_COUNT:
+    #                         if simulated_env.board[rr][cc] == 0 and simulated_env.get_first_empty_row(cc) == rr:
+    #                             return True  # estremità libera e giocabile
+    #     return False
+
+    def creates_triple(self, row, col, player_id):
+        """
+        Controlla se la mossa appena fatta crea una tripletta consecutiva (orizzontale, verticale o diagonale)
+        che NON è ancora una vincita a 4 e ha almeno un'estremità libera.
+        """
+        directions = [(1,0), (0,1), (1,1), (1,-1)]
+        for dr, dc in directions:
+            count = 1
+            # verso avanti
+            r, c = row + dr, col + dc
+            while 0 <= r < ROWS_COUNT and 0 <= c < COLUMNS_COUNT and self.board[r][c] == player_id:
+                count += 1
+                r += dr
+                c += dc
+            # verso indietro
+            r, c = row - dr, col - dc
+            while 0 <= r < ROWS_COUNT and 0 <= c < COLUMNS_COUNT and self.board[r][c] == player_id:
+                count += 1
+                r -= dr
+                c -= dc
+            if count == 3:
+                return True
+        return False
+
+
+    def creates_winning_four(self, row, col, player_id):
+        """
+        Controlla se la mossa appena fatta crea un 4-in-fila vincente.
+        """
+        directions = [(1,0), (0,1), (1,1), (1,-1)]
+        for dr, dc in directions:
+            count = 1
+            # verso avanti
+            r, c = row + dr, col + dc
+            while 0 <= r < ROWS_COUNT and 0 <= c < COLUMNS_COUNT and self.board[r][c] == player_id:
+                count += 1
+                r += dr
+                c += dc
+            # verso indietro
+            r, c = row - dr, col - dc
+            while 0 <= r < ROWS_COUNT and 0 <= c < COLUMNS_COUNT and self.board[r][c] == player_id:
+                count += 1
+                r -= dr
+                c -= dc
+            if count >= 4:
+                return True
+        return False
+
+
+    def is_offensive_move(self, row, col, player):
+        return self.creates_triple(row, col, player) or self.creates_winning_four(row, col, player)
+
     def has_offensive_threat(self, player):
         """
-        Verifica se il giocatore ha una mossa che può creare una tripletta sfruttabile o una quadrupla.
-        Considera solo celle libere che sono effettivamente giocabili (prima libera nella colonna).
+        Controlla se il giocatore ha almeno una mossa che può creare
+        - un 4-in-fila vincente, oppure
+        - una tripletta sfruttabile (almeno un'estremità libera e raggiungibile)
+        Considera solo celle libere effettivamente giocabili (prima libera nella colonna).
         """
         for c in range(COLUMNS_COUNT):
             r = self.get_first_empty_row(c)
@@ -216,24 +301,37 @@ class Connect4Env(gym.Env):
             simulated_env.last_move_row = r
             simulated_env.last_move_col = c
 
-            # Verifica quadrupla (vittoria)
+            # Verifica quadrupla
             if simulated_env.count_consecutive_pieces(r, c, target_count=4, player=player):
                 return True
 
-            # Verifica tripletta con almeno un'estremità libera
-            if simulated_env.count_consecutive_pieces(r, c, target_count=3, player=player):
-                directions = [(1, 0), (0, 1), (1, 1), (1, -1)]
-                for dr, dc in directions:
+            # Verifica tripletta sfruttabile
+            directions = [(1, 0), (0, 1), (1, 1), (1, -1)]
+            for dr, dc in directions:
+                count = 1
+                # avanti
+                for step in range(1, 3):
+                    rr, cc = r + dr*step, c + dc*step
+                    if 0 <= rr < ROWS_COUNT and 0 <= cc < COLUMNS_COUNT and simulated_env.board[rr, cc] == player:
+                        count += 1
+                    else:
+                        break
+                # indietro
+                for step in range(1, 3):
+                    rr, cc = r - dr*step, c - dc*step
+                    if 0 <= rr < ROWS_COUNT and 0 <= cc < COLUMNS_COUNT and simulated_env.board[rr, cc] == player:
+                        count += 1
+                    else:
+                        break
+
+                if count == 3:
                     for sign in [-1, 1]:
-                        rr = r + sign * dr
-                        cc = c + sign * dc
+                        rr, cc = r + sign*dr*3, c + sign*dc*3
                         if 0 <= rr < ROWS_COUNT and 0 <= cc < COLUMNS_COUNT:
-                            if simulated_env.board[rr][cc] == 0 and simulated_env.get_first_empty_row(cc) == rr:
-                                return True  # estremità libera e giocabile
+                            if simulated_env.board[rr, cc] == 0 and (rr == ROWS_COUNT-1 or simulated_env.board[rr+1, cc] != 0):
+                                return True
         return False
 
-
-    
     
     
     # ----------------------

@@ -1,8 +1,6 @@
 import os
 from env.Connect4Env import Connect4Env
 from agents.DQNAgent import DQNAgent
-from agents.RandomAgent import RandomAgent
-from agents.RuleBasedL1Agent import RuleBasedL1Agent
 from agents.RuleBasedL2Agent import RuleBasedL2Agent
 from utils.plots import (
     plot_match_results,
@@ -29,7 +27,6 @@ NUM_GAMES = 1
 def main():
     env = Connect4Env(render_mode=None, first_player=1)
     agent1 = DQNAgent(env, deterministic=True)
-    #agent2 = RandomAgent(env)
     agent2 = RuleBasedL2Agent(env)
 
     if os.path.exists(LOG_FILE):
@@ -62,46 +59,42 @@ def main():
 
                 env.render()
 
-                write_turn_info(f, step_count, agent_name, player_symbol, action, reward)
+                write_turn_info(f, step_count, agent_name, player_symbol, action, reward, obs)
 
-                # Minaccia difensiva prima della mossa
-                threat_present = env.has_opponent_threat(player_id)
-                if threat_present:
-                    def_stats[player_symbol]["occasions"] += 1
-                    write_defensive_opportunity(f, player_symbol, row, col)
+                # ---------- Rilevamento Opportunità Difensive ----------
+                for c in range(env.action_space.n):
+                    r = env.get_first_empty_row(c)
+                    if r is None:
+                        continue
+                    sim_env = env.clone()
+                    sim_env.board[r, c] = -player_id  # mossa avversario
+                    if sim_env.count_consecutive_pieces(r, c, 4, -player_id):
+                        def_stats[player_symbol]["occasions"] += 1
+                        write_defensive_opportunity(f, player_symbol, r, c, obs)
 
-                # Minaccia offensiva prima della mossa
-                if env.has_offensive_threat(player_id):
-                    off_stats[player_symbol]["occasions"] += 1
-                    write_offensive_opportunity(f, player_symbol, row, col)
+                # ---------- Rilevamento Opportunità Offensive ----------
+                for c in range(env.action_space.n):
+                    r = env.get_first_empty_row(c)
+                    if r is None:
+                        continue
+                    sim_env = env.clone()
+                    sim_env.board[r, c] = player_id
+                    if sim_env.count_consecutive_pieces(r, c, 4, player_id) or \
+                       sim_env.count_consecutive_pieces(r, c, 3, player_id):
+                        off_stats[player_symbol]["occasions"] += 1
+                        write_offensive_opportunity(f, player_symbol, r, c, obs)
 
-                # Successo difensivo
-                if row is not None and col is not None and threat_present:
+                # ---------- Successo Difensivo ----------
+                if row is not None and col is not None:
                     if env.is_defensive_move(row, col, player_id):
                         def_stats[player_symbol]["success"] += 1
-                        write_defensive_success(f, player_symbol, row, col)
+                        write_defensive_success(f, player_symbol, row, col, obs)
 
-                # # Successo offensivo
-                # if row is not None and col is not None:
-                #     if env.is_offensive_move(row, col, player_id):
-                #         off_stats[player_symbol]["success"] += 1
-                #         write_offensive_success(f, player_symbol, row, col)
-
-                # ----------------------
-                # Minaccia offensiva prima della mossa
-                # ----------------------
-                # Minaccia offensiva prima della mossa
-                if env.creates_winning_four(row, col, player_id) or env.creates_triple(row, col, player_id):
-                    off_stats[player_symbol]["occasions"] += 1
-                    write_offensive_opportunity(f, player_symbol, row, col)
-
-
-                # Successo offensivo
+                # ---------- Successo Offensive ----------
                 if row is not None and col is not None:
-                    if env.creates_winning_four(row, col, player_id):
+                    if env.is_offensive_move(row, col, player_id):
                         off_stats[player_symbol]["success"] += 1
-                        write_offensive_success(f, player_symbol, row, col)
-
+                        write_offensive_success(f, player_symbol, row, col, obs)
 
                 write_board(f, obs)
 
