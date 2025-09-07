@@ -145,7 +145,34 @@ def plot_defense_summary(def_stats, agent1_name, agent2_name):
     return fig
 
 
+def plot_offense_summary(off_stats, agent1_name, agent2_name):
+    """
+    Visualizza grafico con occasioni offensive create e convertite.
+    """
+    labels = [agent1_name, agent2_name]
+    success = [off_stats["X"]["success"], off_stats["O"]["success"]]
+    fail = [
+        off_stats["X"]["occasions"] - off_stats["X"]["success"],
+        off_stats["O"]["occasions"] - off_stats["O"]["success"]
+    ]
+    bar_width = 0.4
+    x = range(len(labels))
 
+    fig, ax = plt.subplots(figsize=(6, 5))
+    bars_success = ax.bar([i - bar_width/2 for i in x], success, width=bar_width,
+                          label="Occasioni convertite", color="#6495ED")
+    bars_fail = ax.bar([i + bar_width/2 for i in x], fail, width=bar_width,
+                       label="Occasioni non sfruttate", color="#FFB6C1")
+
+    ax.set_xticks(x)
+    ax.set_xticklabels(labels)
+    ax.set_title("Statistiche Offensive")
+    ax.legend()
+    ax.bar_label(bars_success, labels=[str(v) for v in success], padding=3)
+    ax.bar_label(bars_fail, labels=[str(v) for v in fail], padding=3)
+
+    plt.tight_layout()
+    return fig, ax
 
 def show_all_plots():
     """

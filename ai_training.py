@@ -4,16 +4,19 @@ from env.Connect4Env import Connect4Env
 from agents.RandomAgent import RandomAgent
 from agents.RuleBasedL1Agent import RuleBasedL1Agent
 from agents.RuleBasedL2Agent import RuleBasedL2Agent
+from agents.DQNAgent import DQNAgent
 from agents.rl_config import MODEL_PATH_DQN, MODEL_PATH_PPO
+
 
 # Scegli l'algoritmo: "DQN" oppure "PPO"
 ALGORITHM = "DQN"
-TIME_STEPS = 100_000
+TIME_STEPS = 200_000
 
 # Scegli l'avversario
-opponent = RandomAgent(None)
-# opponent = RuleBasedL1Agent(None)
-# opponent = RuleBasedL2Agent(None)
+#opponent = RandomAgent(None)
+#opponent = RuleBasedL1Agent(None)
+#opponent = RuleBasedL2Agent(None)
+opponent = DQNAgent(None)
 
 # Imposta l'ambiente
 env = Connect4Env(opponent=opponent, render_mode=None)
@@ -41,7 +44,7 @@ if ALGORITHM == "DQN":
             verbose=1,
             tensorboard_log="./logs/logs_dqn_training/"
         )
-    model.learn(total_timesteps=TIME_STEPS)
+    model.learn(total_timesteps=TIME_STEPS, reset_num_timesteps=False)
     model.save(model_path)
     print(f"Modello DQN salvato in {model_path}")
 
@@ -63,9 +66,9 @@ elif ALGORITHM == "PPO":
             gae_lambda=0.95,
             clip_range=0.2,
             verbose=1,
-            tensorboard_log="./logs/logs_ppo/"
+            tensorboard_log="./logs/logs_ppo_training/"
         )
-    model.learn(total_timesteps=TIME_STEPS)
+    model.learn(total_timesteps=TIME_STEPS, reset_num_timesteps=False)
     model.save(model_path)
     print(f"Modello PPO salvato in {model_path}")
 

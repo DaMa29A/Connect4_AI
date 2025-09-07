@@ -17,3 +17,7 @@ Creare file requirements
 
 Installa pacchetti requirements
 	pip install -r requirements.txt
+
+Vedere logs di tensorboard
+    tensorboard --logdir=./logs/logs_dqn_training/
+    tensorboard --logdir=./logs/logs_ppo_training/

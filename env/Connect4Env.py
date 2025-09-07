@@ -169,6 +169,12 @@ class Connect4Env(gym.Env):
                         return True
         return False
 
+    
+    def is_offensive_move(self, row, col, player):
+        # player = giocatore che ha fatto l'ultima mossa
+        return self.count_consecutive_pieces(row, col, target_count=3, player=player)
+    
+    
     # ----------------------
     # Gestione mosse
     # ----------------------
@@ -219,6 +225,12 @@ class Connect4Env(gym.Env):
                 reward = REWARDS["draw"]
         else:
             reward = REWARDS["valid_move"]
+            # Tripletta propria
+            if self.count_consecutive_pieces(self.last_move_row, self.last_move_col, target_count=3, player=current_player):
+                reward += REWARDS["create_three"]
+            # Blocco tripletta avversaria
+            if self.is_defensive_move(self.last_move_row, self.last_move_col, current_player):
+                reward += REWARDS["block_three"]
 
         # Cambia turno
         self.switch_player()

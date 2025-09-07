@@ -69,4 +69,7 @@ env.step(4) #X
 row = env.last_move_row
 col = env.last_move_col
 print(f"Has opponent threat? {env.has_opponent_threat(-1)}")
+print(f"Is offensive move at ({row}, {col}) for player X? {env.is_offensive_move(row, col, 1)}")
 env.render()
+
+# RICORDA CHE LE RIGHE VANNO LETTE DA SOPRA A SOTTO (0 IN ALTO, 5 IN BASSO)
