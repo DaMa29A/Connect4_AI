@@ -77,7 +77,16 @@ class Connect4Env(gym.Env):
     def get_board(self):
         return self.board.copy()
     
-    
+    def get_first_empty_row(self, col):
+        """
+        Restituisce l'indice della prima riga libera nella colonna specificata.
+        Se la colonna è piena, restituisce None.
+        """
+        for r in reversed(range(self.board.shape[0])):
+            if self.board[r, col] == 0:
+                return r
+        return None
+
     # ----------------------
     # Controllo vittoria
     # ----------------------
@@ -171,8 +180,60 @@ class Connect4Env(gym.Env):
 
     
     def is_offensive_move(self, row, col, player):
-        # player = giocatore che ha fatto l'ultima mossa
-        return self.count_consecutive_pieces(row, col, target_count=3, player=player)
+        """
+        Verifica se la mossa ha creato una tripletta sfruttabile (con almeno un'estremità libera)
+        o una quadrupla (vittoria).
+        """
+        # Controllo quadrupla diretta
+        if self.count_consecutive_pieces(row, col, target_count=4, player=player):
+            return True
+
+        # Controllo tripletta sfruttabile
+        if self.count_consecutive_pieces(row, col, target_count=3, player=player):
+            directions = [(1, 0), (0, 1), (1, 1), (1, -1)]
+            for dr, dc in directions:
+                for sign in [-1, 1]:
+                    rr = row + sign * dr
+                    cc = col + sign * dc
+                    if 0 <= rr < ROWS_COUNT and 0 <= cc < COLUMNS_COUNT:
+                        if self.board[rr][cc] == 0:
+                            return True  # almeno un'estremità libera
+        return False
+
+    
+    def has_offensive_threat(self, player):
+        """
+        Verifica se il giocatore ha una mossa che può creare una tripletta sfruttabile o una quadrupla.
+        Considera solo celle libere che sono effettivamente giocabili (prima libera nella colonna).
+        """
+        for c in range(COLUMNS_COUNT):
+            r = self.get_first_empty_row(c)
+            if r is None:
+                continue  # colonna piena
+
+            simulated_env = self.clone()
+            simulated_env.board[r, c] = player
+            simulated_env.last_move_row = r
+            simulated_env.last_move_col = c
+
+            # Verifica quadrupla (vittoria)
+            if simulated_env.count_consecutive_pieces(r, c, target_count=4, player=player):
+                return True
+
+            # Verifica tripletta con almeno un'estremità libera
+            if simulated_env.count_consecutive_pieces(r, c, target_count=3, player=player):
+                directions = [(1, 0), (0, 1), (1, 1), (1, -1)]
+                for dr, dc in directions:
+                    for sign in [-1, 1]:
+                        rr = r + sign * dr
+                        cc = c + sign * dc
+                        if 0 <= rr < ROWS_COUNT and 0 <= cc < COLUMNS_COUNT:
+                            if simulated_env.board[rr][cc] == 0 and simulated_env.get_first_empty_row(cc) == rr:
+                                return True  # estremità libera e giocabile
+        return False
+
+
+    
     
     
     # ----------------------
