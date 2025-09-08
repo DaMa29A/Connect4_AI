@@ -6,6 +6,11 @@ def write_header(f, agent1_name, agent2_name):
 def write_game_start(f, game_num):
     f.write(f"\n=== Partita {game_num} ===\n")
 
+def write_start_turn_info(f, step_count, agent_name, player_symbol):
+    f.write(f"\n--- Turno {step_count} ---\n")
+    f.write(f"Giocatore: {agent_name} ({player_symbol})\n")
+
+
 def format_position_for_log(row, col, board):
     """
     Converte coordinate 0-indexed della board in coordinate leggibili:
@@ -53,18 +58,6 @@ def write_turn_info(f, step_count, agent_name, player_symbol, action, reward, bo
     f.write(f"Azione scelta: {display_pos}\n")
     f.write(f"Reward ottenuto: {reward}\n")
 
-
-# def write_defensive_opportunity(f, player_symbol, row, col):
-#     f.write(f"[DIFESA] Occasione rilevata per {player_symbol} — possibile minaccia da bloccare in posizione ({row}, {col}).\n")
-
-# def write_defensive_success(f, player_symbol, row, col):
-#     f.write(f"** MOSSA DIFENSIVA: {player_symbol} ha bloccato una triple avversaria in posizione ({row}, {col})! **\n")
-
-# # def write_offensive_opportunity(f, player_symbol, row, col):
-# #     f.write(f"[ATTACCO] Occasione offensiva rilevata per {player_symbol} — possibilità di creare 3 o 4 in fila in posizione ({row}, {col}).\n")
-
-# def write_offensive_success(f, player_symbol, row, col):
-#     f.write(f"[ATTACCO] Successo: {player_symbol} ha creato una tripletta sfruttabile o una quadrupla vincente in posizione ({row}, {col}).\n")
 
 def write_defensive_opportunity(f, player_symbol, row, col, board):
     display_row, display_col = format_position_for_log(row, col, board)
