@@ -14,14 +14,14 @@ from agents.rl_config import MODEL_PATH_DQN, MODEL_PATH_PPO
 
 # Configurazioni
 ALGORITHM = "DQN"
-TIME_STEPS = 50_000
+TIME_STEPS = 150_000
 START_DQN = True
 FIRST_MOVE_RANDOM = False
 
 # Scegli l'avversario
-opponent = RandomAgent(None)
+# opponent = RandomAgent(None)
 # opponent = RuleBasedL1Agent(None)
-# opponent = RuleBasedL2Agent(None)
+opponent = RuleBasedL2Agent(None)
 # opponent = DQNAgent(None)
 
 # Callback personalizzato per TensorBoard
@@ -78,14 +78,14 @@ if ALGORITHM == "DQN":
         model = DQN(
             "MlpPolicy",
             env,
-            learning_rate=1e-3,
+            learning_rate=1e-4,
             buffer_size=50000,
-            batch_size=64,
+            batch_size=128,
             exploration_initial_eps=1.0,
-            exploration_final_eps=0.05,
-            exploration_fraction=0.3,
+            exploration_final_eps=0.01,
+            exploration_fraction=0.5,
             gamma=0.99,
-            target_update_interval=500,
+            target_update_interval=1000,
             verbose=1,
             tensorboard_log="./logs/logs_dqn_training/"
         )

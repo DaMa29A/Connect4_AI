@@ -3,6 +3,8 @@ from env.Connect4Env import Connect4Env
 from agents.DQNAgent import DQNAgent
 from agents.HumanAgent import HumanAgent
 from agents.RandomAgent import RandomAgent
+from agents.RuleBasedL1Agent import RuleBasedL1Agent
+from agents.RuleBasedL2Agent import RuleBasedL2Agent
 from utils.check_rules import check_defensive_opportunities, check_attack_opportunities
 from utils.logger import (
     write_header, write_game_start, write_board, write_turn_info,
@@ -19,7 +21,9 @@ RENDER_MODE = None  # "console", "gui", or None
 def main():
     env = Connect4Env(render_mode=RENDER_MODE, first_player=1)
     agent1 = DQNAgent(env, deterministic=True)
-    agent2 = RandomAgent(env)
+    #agent2 = RuleBasedL1Agent(env)
+    agent2 = RuleBasedL2Agent(env)
+    #agent2 = RandomAgent(env)
     #agent2 = HumanAgent(env)
 
     agent_names = {"X": agent1.getName(), "O": agent2.getName()}

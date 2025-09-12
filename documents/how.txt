@@ -1,0 +1,25 @@
+Per creare venv:
+    python -m venv venv
+Per attivare venv:
+    venv\Scripts\activate	(deactivate	per sconnettersi)
+Per installare:
+    pip install nome_pacchetto
+
+
+Per cambiare interprete
+    CTRL+Shift+P
+    Cercare Python interpeter
+    seleziona cartella venv/Script/python
+
+
+Creare file requirements
+	pip freeze > requirements.txt
+
+Installa pacchetti requirements
+	pip install -r requirements.txt
+
+Vedere logs di tensorboard
+    tensorboard --logdir=./logs/logs_dqn_training/
+    tensorboard --logdir=./logs/logs_ppo_training/
+    tensorboard --logdir=./logs/action_distribution_dqn/
+    tensorboard --logdir=./logs/action_distribution_ppo/

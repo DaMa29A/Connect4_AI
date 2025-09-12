@@ -4,12 +4,12 @@ from env.env_config import ROWS_COUNT, COLUMNS_COUNT
 
 # Kernel per cercare linee orizzontali, verticali, diagonali
 KERNELS = [
-    np.array([[1, 1, 1, 0]]),   # orizzontale destra
-    np.array([[0, 1, 1, 1]]),   # orizzontale sinistra
-    np.array([[1], [1], [1], [0]]),  # verticale
-    np.array([[0], [1], [1], [1]]),  # verticale inversa
-    np.eye(4, dtype=int),       # diagonale \
-    np.fliplr(np.eye(4, dtype=int))  # diagonale /
+    np.array([[1, 1, 1, 0]]),           # orizzontale destra
+    np.array([[0, 1, 1, 1]]),           # orizzontale sinistra
+    np.array([[1], [1], [1], [0]]),     # verticale
+    np.array([[0], [1], [1], [1]]),     # verticale inversa
+    np.eye(4, dtype=int),               # diagonale \
+    np.fliplr(np.eye(4, dtype=int))     # diagonale /
 ]
 
 def is_playable(board, r, c):
@@ -49,3 +49,17 @@ def check_defensive_opportunities(board, player_id):
 
 def check_attack_opportunities(board, player_id):
     return check_opportunities(board, target_id=player_id)
+
+def is_defensive_move(board, r, c, current_player):
+    defensive_detected = False
+
+    board_before = board.copy() # copia della board
+    board_before[r, c] = 0  # rimuove temporaneamente la mossa appena fatta
+
+    defensive_detected = (r, c) in check_defensive_opportunities(board_before, current_player)
+
+    return defensive_detected
+
+def is_a_triplet(board, r, c, current_player):
+    pass
+    

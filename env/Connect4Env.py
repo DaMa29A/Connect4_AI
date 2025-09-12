@@ -5,6 +5,7 @@ from colorama import Fore, Style, init
 init(autoreset=True)
 from gui.gui_rend import render_gui
 from env.env_config import ROWS_COUNT, COLUMNS_COUNT, REWARDS
+from utils.check_rules import is_defensive_move
 
 
 class Connect4Env(gym.Env):
@@ -205,9 +206,9 @@ class Connect4Env(gym.Env):
             # # Tripletta propria
             # if self.count_consecutive_pieces(self.last_move_row, self.last_move_col, target_count=3, player=current_player):
             #     reward += REWARDS["create_three"]
-            # # Blocco tripletta avversaria
-            # if self.is_defensive_move(self.last_move_row, self.last_move_col, current_player):
-            #     reward += REWARDS["block_three"]
+            # Blocco tripletta avversaria
+            if is_defensive_move(self.board, self.last_move_row, self.last_move_col, current_player):
+                reward += REWARDS["block_three"]
 
         # Cambia turno
         self.switch_player()
