@@ -13,16 +13,16 @@ from agents.DQNAgent import DQNAgent
 from agents.rl_config import MODEL_PATH_DQN, MODEL_PATH_PPO
 
 # Configurazioni
-ALGORITHM = "DQN"
+ALGORITHM = "DQN"  # "DQN" o "PPO"
 TIME_STEPS = 150_000
-START_DQN = True
+START_AI = True
 FIRST_MOVE_RANDOM = False
 
 # Scegli l'avversario
-# opponent = RandomAgent(None)
-# opponent = RuleBasedL1Agent(None)
+#opponent = RandomAgent(None)
+#opponent = RuleBasedL1Agent(None)
 opponent = RuleBasedL2Agent(None)
-# opponent = DQNAgent(None)
+#opponent = DQNAgent(None)
 
 # Callback personalizzato per TensorBoard
 class ActionLoggerCallback(BaseCallback):
@@ -54,9 +54,7 @@ class ActionLoggerCallback(BaseCallback):
 
 env = Connect4Env(opponent=opponent, render_mode=None)
 opponent.env = env
-if not START_DQN:
-    env.force_opponent_opening
-    
+
 if FIRST_MOVE_RANDOM:
     env.step(np.random.choice(env.get_valid_actions()))
 
@@ -64,8 +62,10 @@ if FIRST_MOVE_RANDOM:
 timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M")
 writer = SummaryWriter(log_dir=f"./logs/action_distribution_{ALGORITHM.lower()}/run_{timestamp}")
 
-if START_DQN:
+if START_AI:
     env.force_opponent_opening()
+
+policy_kwargs = dict(net_arch=[128, 128])
 
 # Setup modello
 if ALGORITHM == "DQN":
@@ -78,14 +78,15 @@ if ALGORITHM == "DQN":
         model = DQN(
             "MlpPolicy",
             env,
-            learning_rate=1e-4,
-            buffer_size=50000,
-            batch_size=128,
+            learning_rate=5e-4,
+            buffer_size=100000,
+            batch_size=256,
             exploration_initial_eps=1.0,
             exploration_final_eps=0.01,
-            exploration_fraction=0.5,
+            exploration_fraction=0.6,
             gamma=0.99,
-            target_update_interval=1000,
+            target_update_interval=2000, 
+            policy_kwargs=policy_kwargs,
             verbose=1,
             tensorboard_log="./logs/logs_dqn_training/"
         )
@@ -107,13 +108,13 @@ elif ALGORITHM == "PPO":
         model = PPO(
             "MlpPolicy",
             env,
-            learning_rate=3e-4,
-            n_steps=2048,
-            batch_size=64,
-            n_epochs=10,
-            gamma=0.99,
-            gae_lambda=0.95,
-            clip_range=0.2,
+            learning_rate=3e-4,          
+            n_steps=2048,                
+            batch_size=256,              
+            n_epochs=10,                 
+            gamma=0.995,                 
+            gae_lambda=0.95,             
+            clip_range=0.2, 
             verbose=1,
             tensorboard_log="./logs/logs_ppo_training/"
         )

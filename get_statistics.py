@@ -5,6 +5,8 @@ from agents.HumanAgent import HumanAgent
 from agents.RandomAgent import RandomAgent
 from agents.RuleBasedL1Agent import RuleBasedL1Agent
 from agents.RuleBasedL2Agent import RuleBasedL2Agent
+from agents.PPOAgent import PPOAgent
+import numpy as np
 from utils.check_rules import check_defensive_opportunities, check_attack_opportunities
 from utils.logger import (
     write_header, write_game_start, write_board, write_turn_info,
@@ -21,9 +23,10 @@ RENDER_MODE = None  # "console", "gui", or None
 def main():
     env = Connect4Env(render_mode=RENDER_MODE, first_player=1)
     agent1 = DQNAgent(env, deterministic=True)
+    #agent2 = PPOAgent(env, deterministic=True)
     #agent2 = RuleBasedL1Agent(env)
-    agent2 = RuleBasedL2Agent(env)
-    #agent2 = RandomAgent(env)
+    #agent2 = RuleBasedL2Agent(env)
+    agent2 = RandomAgent(env)
     #agent2 = HumanAgent(env)
 
     agent_names = {"X": agent1.getName(), "O": agent2.getName()}
@@ -45,7 +48,7 @@ def main():
 
             active_def_ops = {"X": set(), "O": set()}
             active_atk_ops = {"X": set(), "O": set()}
-
+            
             while not done:
                 current_player = env.next_player_to_play
                 agent = agent1 if current_player == 1 else agent2

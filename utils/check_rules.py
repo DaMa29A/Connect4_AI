@@ -61,5 +61,22 @@ def is_defensive_move(board, r, c, current_player):
     return defensive_detected
 
 def is_a_triplet(board, r, c, current_player):
-    pass
-    
+    if board[r, c] != current_player:
+        return False
+
+    player_board = (board == current_player).astype(int)
+
+    for kernel in KERNELS:
+        conv = convolve2d(player_board, kernel, mode="valid")
+        locs = np.argwhere(conv == 3)
+
+        for rr, cc in locs:
+            for i in range(kernel.shape[0]):
+                for j in range(kernel.shape[1]):
+                    if kernel[i, j] != 1:
+                        continue
+                    r_check, c_check = rr + i, cc + j
+                    if r_check == r and c_check == c:
+                        return True
+
+    return False
