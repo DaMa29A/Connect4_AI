@@ -1,10 +1,8 @@
 /venv
-/todo.txt
 /agents/__pycache__
 /env/__pycache__
 /gui/__pycache__
 /utils/__pycache__
 /models
 /logs
-/Documents
-/docs
+/documents

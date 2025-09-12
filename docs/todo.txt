@@ -1,7 +1,0 @@
-Riassunto Mancanze
-
-📝 Report documentato (difficoltà, risultati, confronti).
-
-📊 Confronto sistematico DQN vs PPO (benchmark finale).
-Puoi far giocare PPO vs DQN, ma manca uno script/report che mostri i risultati del confronto (win rate, grafici, osservazioni).
-La traccia chiede esplicitamente un confronto finale dei due algoritmi.

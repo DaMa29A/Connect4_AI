@@ -1,7 +1,8 @@
 import numpy as np
 import gymnasium as gym
 from gymnasium import spaces
-from colorama import Fore, Style
+from colorama import Fore, Style, init
+init(autoreset=True)
 from gui.gui_rend import render_gui
 from env.env_config import ROWS_COUNT, COLUMNS_COUNT, REWARDS
 
@@ -78,14 +79,13 @@ class Connect4Env(gym.Env):
         return self.board.copy()
     
     def get_first_empty_row(self, col):
-        """
-        Restituisce l'indice della prima riga libera nella colonna specificata.
-        Se la colonna è piena, restituisce None.
-        """
         for r in reversed(range(self.board.shape[0])):
             if self.board[r, col] == 0:
                 return r
         return None
+
+    def is_playable_cell(self, row, col):
+        return self.get_first_empty_row(col) == row
 
     # ----------------------
     # Controllo vittoria
@@ -146,99 +146,15 @@ class Connect4Env(gym.Env):
     def get_winner(self):
         return self.winner
 
-    """Controlla se la mossa 
-        - ha bloccato una tripla dell'avversario
-    [player] rappresenta il giocatore che sta facendo la mossa difensiva
-    """
-    def is_defensive_move(self, row, col, player):
-        opponent = -player
 
-        # La cella deve essere appena occupata dal player
-        if self.board[row, col] != player:
-            return False
-
-        # Simula che l'avversario giochi lì
-        simulated_env = self.clone()
-        simulated_env.board[row, col] = opponent
-
-        # Se l'avversario avrebbe fatto 4 in fila → la mossa ha bloccato
-        return simulated_env.count_consecutive_pieces(row, col, target_count=4, player=opponent)
-
-    """
-        Controlla se l'avversario ha una triple potenziale da completare.
-    """
-    def has_opponent_threat(self, player):
-        opponent = -player
-        for r in range(ROWS_COUNT):
-            for c in range(COLUMNS_COUNT):
-                if self.board[r, c] == 0:
-                    simulated_env = self.clone()
-                    simulated_env.board[r, c] = opponent
-                    if simulated_env.count_consecutive_pieces(r, c, target_count=4, player=opponent):
-                        return True
-        return False
-
-    
-    def is_offensive_move(self, row, col, player):
-        """
-        Verifica se la mossa ha creato una tripletta sfruttabile (con almeno un'estremità libera)
-        o una quadrupla (vittoria).
-        """
-        # Controllo quadrupla diretta
-        if self.count_consecutive_pieces(row, col, target_count=4, player=player):
-            return True
-
-        # Controllo tripletta sfruttabile
-        if self.count_consecutive_pieces(row, col, target_count=3, player=player):
-            directions = [(1, 0), (0, 1), (1, 1), (1, -1)]
-            for dr, dc in directions:
-                for sign in [-1, 1]:
-                    rr = row + sign * dr
-                    cc = col + sign * dc
-                    if 0 <= rr < ROWS_COUNT and 0 <= cc < COLUMNS_COUNT:
-                        if self.board[rr][cc] == 0:
-                            return True  # almeno un'estremità libera
-        return False
-
-    
-    def has_offensive_threat(self, player):
-        """
-        Verifica se il giocatore ha una mossa che può creare una tripletta sfruttabile o una quadrupla.
-        Considera solo celle libere che sono effettivamente giocabili (prima libera nella colonna).
-        """
-        for c in range(COLUMNS_COUNT):
-            r = self.get_first_empty_row(c)
-            if r is None:
-                continue  # colonna piena
-
-            simulated_env = self.clone()
-            simulated_env.board[r, c] = player
-            simulated_env.last_move_row = r
-            simulated_env.last_move_col = c
-
-            # Verifica quadrupla (vittoria)
-            if simulated_env.count_consecutive_pieces(r, c, target_count=4, player=player):
-                return True
-
-            # Verifica tripletta con almeno un'estremità libera
-            if simulated_env.count_consecutive_pieces(r, c, target_count=3, player=player):
-                directions = [(1, 0), (0, 1), (1, 1), (1, -1)]
-                for dr, dc in directions:
-                    for sign in [-1, 1]:
-                        rr = r + sign * dr
-                        cc = c + sign * dc
-                        if 0 <= rr < ROWS_COUNT and 0 <= cc < COLUMNS_COUNT:
-                            if simulated_env.board[rr][cc] == 0 and simulated_env.get_first_empty_row(cc) == rr:
-                                return True  # estremità libera e giocabile
-        return False
-
-
-    
-    
-    
     # ----------------------
     # Gestione mosse
     # ----------------------
+    def force_opponent_opening(self):
+        if self.opponent is not None:
+            opponent_action = self.opponent.choose_action()
+            obs, opp_reward, done, trunc, info = self.step(opponent_action, play_opponent=False)
+            return obs, -opp_reward, done, trunc, info
 
     def play_action(self, action):
         for i in range(ROWS_COUNT - 1, -1, -1):
@@ -286,12 +202,12 @@ class Connect4Env(gym.Env):
                 reward = REWARDS["draw"]
         else:
             reward = REWARDS["valid_move"]
-            # Tripletta propria
-            if self.count_consecutive_pieces(self.last_move_row, self.last_move_col, target_count=3, player=current_player):
-                reward += REWARDS["create_three"]
-            # Blocco tripletta avversaria
-            if self.is_defensive_move(self.last_move_row, self.last_move_col, current_player):
-                reward += REWARDS["block_three"]
+            # # Tripletta propria
+            # if self.count_consecutive_pieces(self.last_move_row, self.last_move_col, target_count=3, player=current_player):
+            #     reward += REWARDS["create_three"]
+            # # Blocco tripletta avversaria
+            # if self.is_defensive_move(self.last_move_row, self.last_move_col, current_player):
+            #     reward += REWARDS["block_three"]
 
         # Cambia turno
         self.switch_player()
@@ -299,7 +215,7 @@ class Connect4Env(gym.Env):
         if is_finish:
             return self.board.copy(), reward, True, False, {"action_mask": self.get_action_mask()}
 
-        # Opponente (se c’è e siamo in gioco normale, non training)
+        # Opponent
         if play_opponent and self.opponent is not None:
             opponent_action = self.opponent.choose_action()
             obs, opp_reward, done, trunc, info = self.step(opponent_action, play_opponent=False)
@@ -319,18 +235,49 @@ class Connect4Env(gym.Env):
         else:
             pass
 
+    # def render_console(self):
+    #     print("\nCurrent board:")
+    #     for row in self.board:
+    #         row_str = ""
+    #         for cell in row:
+    #             if cell == 1:
+    #                 row_str += f"{Fore.RED}X{Style.RESET_ALL} | "
+    #             elif cell == -1:
+    #                 row_str += f"{Fore.YELLOW}O{Style.RESET_ALL} | "
+    #             else:
+    #                 row_str += "  | "
+    #         print(row_str[:-2])
+    #     print("‾" * (COLUMNS_COUNT * 4 - 1))
+    #     print("   ".join(str(i) for i in range(COLUMNS_COUNT)))
+    #     print()
+
+
     def render_console(self):
+        """
+        Mostra la board in console con colori:
+        X rosso, O giallo, numeri di riga a sinistra (indice riga e colonna da 0).
+        """
+        ROWS, COLS = self.board.shape
         print("\nCurrent board:")
-        for row in self.board:
-            row_str = ""
-            for cell in row:
+
+        for r in range(ROWS):
+            row_str = f"{r} | "  # numero di riga a sinistra
+            for c in range(COLS):
+                cell = self.board[r, c]
                 if cell == 1:
                     row_str += f"{Fore.RED}X{Style.RESET_ALL} | "
                 elif cell == -1:
                     row_str += f"{Fore.YELLOW}O{Style.RESET_ALL} | "
                 else:
                     row_str += "  | "
-            print(row_str[:-2])
-        print("‾" * (COLUMNS_COUNT * 4 - 1))
-        print("   ".join(str(i) for i in range(COLUMNS_COUNT)))
-        print()
+            print(row_str.rstrip())
+
+        # linea divisoria
+        print("‾" * (COLS * 4 + 3))
+        
+        # etichette colonne
+        col_labels = "    " + "   ".join(str(c) for c in range(COLS))
+        print(col_labels + "\n")
+
+
+

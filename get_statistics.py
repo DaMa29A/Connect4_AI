@@ -1,220 +1,37 @@
-# import os
-# from env.Connect4Env import Connect4Env
-# from agents.DQNAgent import DQNAgent
-# from agents.RuleBasedL2Agent import RuleBasedL2Agent
-# from agents.HumanAgent import HumanAgent
-# from utils.plots import (
-#     plot_match_results,
-#     plot_defense_summary,
-#     plot_offense_summary,
-#     show_all_plots
-# )
-# from utils.logger import (
-#     write_header,
-#     write_game_start,
-#     write_turn_info,
-#     write_defensive_opportunity,
-#     write_defensive_success,
-#     write_offensive_opportunity,
-#     write_offensive_success,
-#     write_board,
-#     write_game_result,
-#     write_final_stats,
-#     write_start_turn_info
-# )
-
-# LOG_FILE = "./logs/game_log.txt"
-# NUM_GAMES = 1
-# RENDER_MODE = "console"  # "console" or "gui"
-
-
-# def main():
-#     # DEFINIZIONE AMBIENTE E AGENTI
-#     env = Connect4Env(render_mode=RENDER_MODE, first_player=1)
-#     agent1 = DQNAgent(env, deterministic=True)
-#     #agent2 = RuleBasedL2Agent(env)
-#     agent2 = HumanAgent(env)
-
-#     # RESET LOG FILE
-#     if os.path.exists(LOG_FILE):
-#         os.remove(LOG_FILE)
-
-#     # STATISTICHE
-#     results = {"X": 0, "O": 0, "Draw": 0}
-#     def_stats = {"X": {"occasions": 0, "success": 0}, "O": {"occasions": 0, "success": 0}}
-#     off_stats = {"X": {"occasions": 0, "success": 0}, "O": {"occasions": 0, "success": 0}}
-
-#     # LOGGING E SIMULAZIONE PARTITE
-#     with open(LOG_FILE, "w", encoding="utf-8") as f:
-#         write_header(f, agent1.getName(), agent2.getName())
-
-#         # Per ogni partita
-#         for game_num in range(1, NUM_GAMES + 1):
-#             write_game_start(f, game_num) # Scrive numero partita
-#             env.reset()
-#             done = False
-#             step_count = 0
-#             # Finché la partita non è finita (per ogni turno)
-#             while not done:
-#                 current_agent = agent1 if env.next_player_to_play == 1 else agent2
-#                 player_id = env.next_player_to_play
-#                 opponent_id = -player_id
-#                 player_symbol = "X" if player_id == 1 else "O"
-#                 agent_name = current_agent.getName()
-
-#                 # === Prima raccogli le occasioni in liste temporanee ===
-#                 def_opportunities = []
-#                 off_opportunities = []
-
-#                 # === Ora fai la mossa vera ===
-#                 copy_env = env.clone() # Copia per simulazioni prima di effettuare mossa
-#                 action = current_agent.choose_action()
-#                 obs, reward, done, _, info = env.step(action)
-#                 step_count += 1
-#                 row = env.last_move_row
-#                 col = env.last_move_col
-
-#                 env.render()
-#                 write_turn_info(f, step_count, agent_name, player_symbol, action, reward, obs)
-
-#                 # Simula occasioni difensive
-#                 for c in copy_env.get_valid_actions():
-#                     r = copy_env.get_first_empty_row(c) # Trova la prima riga vuota in colonna c
-#                     if r is None:
-#                         continue
-#                     # Simula la mossa dell'avversario
-#                     sim_env = copy_env.clone()
-#                     sim_env.board[r, c] = opponent_id
-#                     sim_env.last_move_row = r
-#                     sim_env.last_move_col = c
-                    
-#                     if sim_env.count_consecutive_pieces(r, c, 4, opponent_id):
-#                         def_stats[player_symbol]["occasions"] += 1
-#                         def_opportunities.append((r, c, copy_env.get_board()))
-#                         write_defensive_opportunity(f, player_symbol, r, c, obs)
-
-#                 # Simula occasioni offensive
-#                 for c in env.get_valid_actions():
-#                     r = env.get_first_empty_row(c)
-#                     if r is None:
-#                         continue
-#                     sim_env = env.clone()
-#                     sim_env.board[r, c] = player_id
-#                     sim_env.last_move_row = r
-#                     sim_env.last_move_col = c
-#                     if sim_env.count_consecutive_pieces(r, c, 3, player_id) or \
-#                        sim_env.count_consecutive_pieces(r, c, 4, player_id):
-#                         if not sim_env.check_win_around_last_move(r, c):
-#                             off_stats[player_symbol]["occasions"] += 1
-#                             off_opportunities.append((r, c, env.get_board()))
-#                             write_offensive_opportunity(f, player_symbol, r, c, obs)
-
-#                 # Successo difensivo
-#                 if row is not None and col is not None:
-#                     if env.is_defensive_move(row, col, player_id):
-#                         def_stats[player_symbol]["success"] += 1
-#                         write_defensive_success(f, player_symbol, row, col, obs)
-
-#                 # Successo offensivo
-#                 if row is not None and col is not None:
-#                     if env.check_win_around_last_move(row, col):
-#                         off_stats[player_symbol]["success"] += 1
-#                         write_offensive_success(f, player_symbol, row, col, obs)
-#                     elif env.is_offensive_move(row, col, player_id):
-#                         off_stats[player_symbol]["success"] += 1
-#                         write_offensive_success(f, player_symbol, row, col, obs)
-
-#                 write_board(f, obs)
-
-#             # Fine partita
-#             winner = env.get_winner()
-#             write_game_result(f, winner)
-#             if winner == 1:
-#                 results["X"] += 1
-#             elif winner == -1:
-#                 results["O"] += 1
-#             else:
-#                 results["Draw"] += 1
-
-#         write_final_stats(f, results, def_stats, agent1.getName(), agent2.getName())
-
-#         # Aggiungi statistiche offensive cumulative
-#         f.write("\n=== Statistiche Offensive Cumulative ===\n")
-#         for symbol, name in [("X", agent1.getName()), ("O", agent2.getName())]:
-#             occ = off_stats[symbol]["occasions"]
-#             succ = off_stats[symbol]["success"]
-#             miss = max(0, occ - succ)
-#             perc = (succ / occ * 100) if occ > 0 else 0
-#             f.write(
-#                 f"{name} ({symbol}): Occasioni: {occ} | Convertite: {succ} | "
-#                 f"Non sfruttate: {miss} | Percentuale: {perc:.2f}%\n"
-#             )
-
-#     print(f"Partite completate. Log salvato in {LOG_FILE}")
-#     print(f"Defensive Stats: {def_stats}    Offensive Stats: {off_stats}")
-
-#     plot_match_results(results, agent1.getName(), agent2.getName())
-#     plot_defense_summary(def_stats, agent1.getName(), agent2.getName())
-#     plot_offense_summary(off_stats, agent1.getName(), agent2.getName())
-#     show_all_plots()
-
-
-# if __name__ == "__main__":
-#     main()
-
-
-
-
 import os
 from env.Connect4Env import Connect4Env
 from agents.DQNAgent import DQNAgent
-from agents.RuleBasedL2Agent import RuleBasedL2Agent
 from agents.HumanAgent import HumanAgent
-from utils.plots import (
-    plot_match_results,
-    plot_defense_summary,
-    plot_offense_summary,
-    show_all_plots
-)
+from agents.RandomAgent import RandomAgent
+from utils.check_rules import check_defensive_opportunities, check_attack_opportunities
 from utils.logger import (
-    write_header,
-    write_game_start,
-    write_turn_info,
-    write_defensive_opportunity,
-    write_defensive_success,
-    write_offensive_opportunity,
-    write_offensive_success,
-    write_board,
-    write_game_result,
-    write_final_stats,
+    write_header, write_game_start, write_board, write_turn_info,
+    write_game_result, write_final_stats, write_opportunity, write_success
+)
+from utils.plots import (
+    plot_match_results, plot_defense_summary, plot_offense_summary, show_all_plots
 )
 
 LOG_FILE = "./logs/game_log.txt"
-NUM_GAMES = 1
-RENDER_MODE = "console"  # "console" or "gui"
+NUM_GAMES = 200
+RENDER_MODE = None  # "console", "gui", or None
 
 def main():
-    # Definizione ambiente e agenti
     env = Connect4Env(render_mode=RENDER_MODE, first_player=1)
     agent1 = DQNAgent(env, deterministic=True)
-    agent2 = HumanAgent(env)
+    agent2 = RandomAgent(env)
+    #agent2 = HumanAgent(env)
 
-    # Reset log file
+    agent_names = {"X": agent1.getName(), "O": agent2.getName()}
+    results = {"X": 0, "O": 0, "Draw": 0}
+    def_stats = {"X": {"occasions": 0, "success": 0}, "O": {"occasions": 0, "success": 0}}
+    attack_stats = {"X": {"occasions": 0, "success": 0}, "O": {"occasions": 0, "success": 0}}
+
     if os.path.exists(LOG_FILE):
         os.remove(LOG_FILE)
 
-    # Statistiche
-    results = {"X": 0, "O": 0, "Draw": 0}
-    def_stats = {"X": {"occasions": 0, "success": 0}, "O": {"occasions": 0, "success": 0}}
-    off_stats = {"X": {"occasions": 0, "success": 0}, "O": {"occasions": 0, "success": 0}}
-
-    # Posizioni già registrate
-    def_positions = {"X": set(), "O": set()}
-    off_positions = {"X": set(), "O": set()}
-
-    # Logging e simulazione partite
     with open(LOG_FILE, "w", encoding="utf-8") as f:
-        write_header(f, agent1.getName(), agent2.getName())
+        write_header(f, agent_names["X"], agent_names["O"])
 
         for game_num in range(1, NUM_GAMES + 1):
             write_game_start(f, game_num)
@@ -222,67 +39,76 @@ def main():
             done = False
             step_count = 0
 
-            while not done:
-                current_agent = agent1 if env.next_player_to_play == 1 else agent2
-                player_id = env.next_player_to_play
-                opponent_id = -player_id
-                player_symbol = "X" if player_id == 1 else "O"
-                agent_name = current_agent.getName()
+            active_def_ops = {"X": set(), "O": set()}
+            active_atk_ops = {"X": set(), "O": set()}
 
-                copy_env = env.clone()
-                action = current_agent.choose_action()
+            while not done:
+                current_player = env.next_player_to_play
+                agent = agent1 if current_player == 1 else agent2
+                player_symbol = "X" if current_player == 1 else "O"
+                agent_name = agent_names[player_symbol]
+
+                action = agent.choose_action()
+                row = env.get_first_empty_row(action)
+                col = action
+
                 obs, reward, done, _, _ = env.step(action)
                 step_count += 1
-                row, col = env.last_move_row, env.last_move_col
-
                 env.render()
-                write_turn_info(f, step_count, agent_name, player_symbol, action, reward, obs)
 
-                # Simula difese
-                for c in copy_env.get_valid_actions():
-                    r = copy_env.get_first_empty_row(c)
-                    if r is None:
-                        continue
-                    sim_env = copy_env.clone()
-                    sim_env.board[r, c] = opponent_id
-                    sim_env.last_move_row = r
-                    sim_env.last_move_col = c
-                    if sim_env.count_consecutive_pieces(r, c, 4, opponent_id) and (r, c) not in def_positions[player_symbol]:
-                        def_stats[player_symbol]["occasions"] += 1
-                        def_positions[player_symbol].add((r, c))
-                        write_defensive_opportunity(f, player_symbol, r, c, obs)
+                write_turn_info(f, step_count, agent_name, player_symbol, row, col, reward)
+                write_board(f, env.board)
 
-                # Simula attacchi
-                for c in env.get_valid_actions():
-                    r = env.get_first_empty_row(c)
-                    if r is None:
-                        continue
-                    sim_env = env.clone()
-                    sim_env.board[r, c] = player_id
-                    sim_env.last_move_row = r
-                    sim_env.last_move_col = c
-                    if ((sim_env.count_consecutive_pieces(r, c, 3, player_id) or
-                         sim_env.count_consecutive_pieces(r, c, 4, player_id)) and
-                        (r, c) not in off_positions[player_symbol]):
-                        off_stats[player_symbol]["occasions"] += 1
-                        off_positions[player_symbol].add((r, c))
-                        write_offensive_opportunity(f, player_symbol, r, c, obs)
+                # Se la partita è finita dopo la mossa, non rilevare nuove opportunità
+                # if env.is_finish():
+                #     break
+                # Se la partita è finita dopo la mossa, verifica se è stato un attacco riuscito
+                if env.is_finish():
+                    # Controlla se la cella appena giocata era già stata identificata come opportunità di attacco in turni precedenti.
+                    if (row, col) in active_atk_ops[player_symbol]:
+                        attack_stats[player_symbol]["success"] += 1
+                        active_atk_ops[player_symbol].remove((row, col))
+                        write_success(f, "ATTACK", player_symbol, row, col)
+                    else:
+                        # Verifica manuale se la mossa ha creato una sequenza vincente
+                        final_attacks = check_attack_opportunities(env.board, current_player)
+                        if (row, col) in final_attacks:
+                            attack_stats[player_symbol]["occasions"] += 1
+                            attack_stats[player_symbol]["success"] += 1
+                            write_opportunity(f, "Attack", player_symbol, row, col)
+                            write_success(f, "ATTACK", player_symbol, row, col)
+                    break
 
-                # Successo difensivo
-                if row is not None and col is not None and (row, col) in def_positions[player_symbol]:
+                # Opportunità di attacco per chi ha appena giocato
+                new_atk_ops = check_attack_opportunities(env.board, current_player)
+                for r, c in new_atk_ops:
+                    if (r, c) not in active_atk_ops[player_symbol]:
+                        active_atk_ops[player_symbol].add((r, c))
+                        attack_stats[player_symbol]["occasions"] += 1
+                        write_opportunity(f, "Attack", player_symbol, r, c)
+
+                # Opportunità di difesa per l’avversario
+                opponent_id = -current_player
+                opponent_symbol = "X" if opponent_id == 1 else "O"
+                new_def_ops = check_defensive_opportunities(env.board, opponent_id)
+                for r, c in new_def_ops:
+                    if (r, c) not in active_def_ops[opponent_symbol]:
+                        active_def_ops[opponent_symbol].add((r, c))
+                        def_stats[opponent_symbol]["occasions"] += 1
+                        write_opportunity(f, "Defensive", opponent_symbol, r, c)
+
+                # Verifica se la mossa ha sfruttato un'opportunità
+                if (row, col) in active_def_ops[player_symbol]:
                     def_stats[player_symbol]["success"] += 1
-                    write_defensive_success(f, player_symbol, row, col, obs)
+                    active_def_ops[player_symbol].remove((row, col))
+                    write_success(f, "DEFENSIVE", player_symbol, row, col)
 
-                # Successo offensivo
-                if row is not None and col is not None and (row, col) in off_positions[player_symbol]:
-                    off_stats[player_symbol]["success"] += 1
-                    write_offensive_success(f, player_symbol, row, col, obs)
+                if (row, col) in active_atk_ops[player_symbol]:
+                    attack_stats[player_symbol]["success"] += 1
+                    active_atk_ops[player_symbol].remove((row, col))
+                    write_success(f, "ATTACK", player_symbol, row, col)
 
-                write_board(f, obs)
-
-            # Fine partita
             winner = env.get_winner()
-            write_game_result(f, winner)
             if winner == 1:
                 results["X"] += 1
             elif winner == -1:
@@ -290,29 +116,14 @@ def main():
             else:
                 results["Draw"] += 1
 
-        # Statistiche finali
-        write_final_stats(f, results, def_stats, agent1.getName(), agent2.getName())
+            write_game_result(f, winner)
 
-        f.write("\n=== Statistiche Offensive Cumulative ===\n")
-        for symbol, name in [("X", agent1.getName()), ("O", agent2.getName())]:
-            occ = off_stats[symbol]["occasions"]
-            succ = off_stats[symbol]["success"]
-            miss = occ - succ
-            perc = (succ / occ * 100) if occ > 0 else 0
-            f.write(
-                f"{name} ({symbol}): Occasioni: {occ} | Convertite: {succ} | "
-                f"Non sfruttate: {miss} | Percentuale: {perc:.2f}%\n"
-            )
+        write_final_stats(f, results, def_stats, attack_stats, agent_names["X"], agent_names["O"])
 
-    print(f"Partite completate. Log salvato in {LOG_FILE}")
-    print(f"Defensive Stats: {def_stats}    Offensive Stats: {off_stats}")
-
-    plot_match_results(results, agent1.getName(), agent2.getName())
-    plot_defense_summary(def_stats, agent1.getName(), agent2.getName())
-    plot_offense_summary(off_stats, agent1.getName(), agent2.getName())
+    plot_match_results(results, agent_names["X"], agent_names["O"])
+    plot_defense_summary(def_stats, agent_names["X"], agent_names["O"])
+    plot_offense_summary(attack_stats, agent_names["X"], agent_names["O"])
     show_all_plots()
-
 
 if __name__ == "__main__":
     main()
-
