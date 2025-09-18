@@ -1,32 +1,27 @@
 import os
 from env.Connect4Env import Connect4Env
-from agents.DQNAgent import DQNAgent
 from agents.HumanAgent import HumanAgent
 from agents.RandomAgent import RandomAgent
 from agents.RuleBasedL1Agent import RuleBasedL1Agent
 from agents.RuleBasedL2Agent import RuleBasedL2Agent
-from agents.PPOAgent import PPOAgent
+# from agents.PPOAgent import PPOAgent
+from agents.DQNAgent import DQNAgent
 import numpy as np
 from utils.check_rules import check_defensive_opportunities, check_attack_opportunities
-from utils.logger import (
-    write_header, write_game_start, write_board, write_turn_info,
-    write_game_result, write_final_stats, write_opportunity, write_success
-)
-from utils.plots import (
-    plot_match_results, plot_defense_summary, plot_offense_summary, show_all_plots
-)
+from utils.logger import *
+from utils.plots import *
 
 LOG_FILE = "./logs/game_log.txt"
 NUM_GAMES = 200
 RENDER_MODE = None  # "console", "gui", or None
 
 def main():
-    env = Connect4Env(render_mode=RENDER_MODE, first_player=1)
-    agent1 = DQNAgent(env, deterministic=True)
-    #agent2 = PPOAgent(env, deterministic=True)
+    env = Connect4Env(render_mode=RENDER_MODE)
+    #agent1 = PPOAgent(env, deterministic=True)
+    agent1 = DQNAgent(env)
+    agent2 = RuleBasedL2Agent(env)
     #agent2 = RuleBasedL1Agent(env)
-    #agent2 = RuleBasedL2Agent(env)
-    agent2 = RandomAgent(env)
+    #agent2 = RandomAgent(env)
     #agent2 = HumanAgent(env)
 
     agent_names = {"X": agent1.getName(), "O": agent2.getName()}
@@ -66,9 +61,6 @@ def main():
                 write_turn_info(f, step_count, agent_name, player_symbol, row, col, reward)
                 write_board(f, env.board)
 
-                # Se la partita è finita dopo la mossa, non rilevare nuove opportunità
-                # if env.is_finish():
-                #     break
                 # Se la partita è finita dopo la mossa, verifica se è stato un attacco riuscito
                 if env.is_finish():
                     # Controlla se la cella appena giocata era già stata identificata come opportunità di attacco in turni precedenti.

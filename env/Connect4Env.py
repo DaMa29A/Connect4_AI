@@ -5,31 +5,31 @@ from colorama import Fore, Style, init
 init(autoreset=True)
 from gui.gui_rend import render_gui
 from env.env_config import ROWS_COUNT, COLUMNS_COUNT, REWARDS
-from utils.check_rules import is_defensive_move, is_a_triplet
-
+from utils.check_rules import is_defensive_move, is_a_triplet, is_a_quadruplet
 
 class Connect4Env(gym.Env):
-    metadata = {"render_modes": ["console", "gui"]}
-
-    def __init__(self, opponent=None, render_mode=None, first_player=1):
+    # opponent_symbol: -1 (O) o 1 (X)
+    # opponent: classe agente (es. RandomAgent)
+    # render_mode: "console", "gui" o None
+    def __init__(self, opponent_symbol=-1, opponent=None, render_mode=None, first_move_random=False):
         super().__init__()
-        self.opponent = opponent
-        self.first_player = first_player
-        self.next_player_to_play = first_player
         self.render_mode = render_mode
+        self.first_move_random = first_move_random
 
-        # Azioni = colonne disponibili
-        self.action_space = spaces.Discrete(COLUMNS_COUNT)
-        # Osservazioni = griglia 6x7
+        # Identità giocatori
+        self.first_player = 1 # Inizia sempre X
+        self.next_player_to_play = self.first_player
+        self.opponent_symbol = opponent_symbol
+        # Se viene passata una classe, istanzia l'agente
+        self.opponent = opponent(self) if opponent is not None else None
+
+        # Spazi Gym
+        self.action_space = spaces.Discrete(COLUMNS_COUNT) # 7 colonne
         self.observation_space = spaces.Box(
             low=-1, high=1, shape=(ROWS_COUNT, COLUMNS_COUNT), dtype=np.float32
         )
 
         self.reset()
-
-    # ----------------------
-    # Utility funzioni base
-    # ----------------------
 
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)
@@ -38,7 +38,27 @@ class Connect4Env(gym.Env):
         self.last_move_row = None
         self.last_move_col = None
         self.winner = None
-        return self.board.copy(), {"action_mask": self.get_action_mask()}
+        
+        # Se l'opponent è X (1), deve iniziare la partita
+        # if self.opponent is not None and self.opponent_symbol == self.first_player:
+        #     self.opponent_step()
+            
+        # borad, info aggiuntive
+        return self.board.copy(), {}
+    
+    def clone(self):
+        new_env = Connect4Env(
+            opponent_symbol=-1, opponent=None, render_mode=None
+        )
+        new_env.next_player_to_play = self.next_player_to_play
+        new_env.board = self.board.copy()
+        new_env.last_move_row = self.last_move_row
+        new_env.last_move_col = self.last_move_col
+        new_env.winner = self.winner
+        return new_env
+
+    def get_board(self):
+        return self.board.copy()
 
     def is_action_valid(self, action):
         return 0 <= action < COLUMNS_COUNT and not self.is_column_full(action)
@@ -51,33 +71,6 @@ class Connect4Env(gym.Env):
 
     def get_valid_actions(self):
         return [c for c in range(COLUMNS_COUNT) if not self.is_column_full(c)]
-
-    """
-    Crea una maschera binaria che indica quali colonne sono ancora disponibili per giocare.
-    1 = colonna valida, 0 = invalida.
-    """
-    def get_action_mask(self):
-        mask = np.zeros(COLUMNS_COUNT, dtype=np.int8)
-        for c in self.get_valid_actions():
-            mask[c] = 1
-        return mask
-
-    def switch_player(self):
-        self.next_player_to_play = -self.next_player_to_play
-
-    def clone(self):
-        new_env = Connect4Env(
-            opponent=self.opponent, render_mode=self.render_mode, first_player=self.first_player
-        )
-        new_env.next_player_to_play = self.next_player_to_play
-        new_env.board = self.board.copy()
-        new_env.last_move_row = self.last_move_row
-        new_env.last_move_col = self.last_move_col
-        new_env.winner = self.winner
-        return new_env
-
-    def get_board(self):
-        return self.board.copy()
     
     def get_first_empty_row(self, col):
         for r in reversed(range(self.board.shape[0])):
@@ -87,49 +80,26 @@ class Connect4Env(gym.Env):
 
     def is_playable_cell(self, row, col):
         return self.get_first_empty_row(col) == row
-
-    # ----------------------
-    # Controllo vittoria
-    # ----------------------
     
-    """
-    Conta se ci sono target_count pedine consecutive del player attorno alla posizione (row, col).
-    """
-    def count_consecutive_pieces(self, row, col, target_count, player):
-        directions = [(1, 0), (0, 1), (1, 1), (1, -1)]
-
-        for dr, dc in directions:
-            count = 1 if self.board[row, col] == player else 0  # Include la pedina se è del player
-
-            # Verso avanti
-            for step in range(1, target_count):
-                r, c = row + step * dr, col + step * dc
-                if 0 <= r < ROWS_COUNT and 0 <= c < COLUMNS_COUNT and self.board[r, c] == player:
-                    count += 1
-                else:
-                    break
-
-            # Verso indietro
-            for step in range(1, target_count):
-                r, c = row - step * dr, col - step * dc
-                if 0 <= r < ROWS_COUNT and 0 <= c < COLUMNS_COUNT and self.board[r, c] == player:
-                    count += 1
-                else:
-                    break
-
-            if count >= target_count:
-                return True
-
-        return False
-
+    
+    # Crea una maschera binaria che indica quali colonne sono ancora disponibili per giocare.
+    # 1 = colonna valida, 0 = non valida.
+    def get_action_mask(self):
+        mask = np.zeros(COLUMNS_COUNT, dtype=np.int8)
+        for c in self.get_valid_actions():
+            mask[c] = 1
+        return mask
+    
+    def switch_player(self):
+        self.next_player_to_play = -self.next_player_to_play
+    
     # Quando ci sono 4 pedine consecutive restituisce True
     def check_win_around_last_move(self, row, col):
         player = self.board[row, col]
-        return self.count_consecutive_pieces(row, col, target_count=4, player=player)
-
+        return is_a_quadruplet(self.board, row, col, player)
+    
     def is_finish(self): 
-        # reset winner
-        self.winner = None
+        self.winner = None # reset winner
         # Se non è stata ancora fatta alcuna mossa, non può esserci una vittoria o pareggio
         if self.last_move_row is None or self.last_move_col is None:
             return False
@@ -146,17 +116,8 @@ class Connect4Env(gym.Env):
 
     def get_winner(self):
         return self.winner
-
-
-    # ----------------------
-    # Gestione mosse
-    # ----------------------
-    def force_opponent_opening(self):
-        if self.opponent is not None:
-            opponent_action = self.opponent.choose_action()
-            obs, opp_reward, done, trunc, info = self.step(opponent_action, play_opponent=False)
-            return obs, -opp_reward, done, trunc, info
-
+    
+    # Esegue l’azione (giocata) del giocatore corrente
     def play_action(self, action):
         for i in range(ROWS_COUNT - 1, -1, -1):
             if self.board[i, action] == 0:
@@ -164,25 +125,34 @@ class Connect4Env(gym.Env):
                 self.last_move_row = i
                 self.last_move_col = action
                 return
-
+    
+    def opponent_step(self):
+        if self.opponent is not None:
+            opponent_action = self.opponent.choose_action()
+            obs, opp_reward, done, trunc, info = self.step(opponent_action, play_opponent=False)
+            return obs, -opp_reward, done, trunc, info
+    
     def step(self, action, play_opponent=True):
-        # Assicurati che action sia int
-        action = int(action)
+        # Apertura automatica dell'opponent se necessario
+        if play_opponent and self.opponent_symbol == self.first_player and np.all(self.board == 0):
+            self.opponent_step()
+            
+        # Prima mossa random se abilitato
+        if self.first_move_random and np.all(self.board == 0):
+            action = (np.random.choice(self.get_valid_actions()))
+        
+        action = int(action) # Action deve essere int
 
         # Azioni valide
         valid_moves = self.get_valid_actions()
         if not valid_moves:
             self.winner = 0
-            return self.board.copy(), REWARDS["draw"], True, False, {
-                "action_mask": self.get_action_mask()
-            }
+            return self.board.copy(), REWARDS["draw"], True, False, {}
 
+        # Controlla se l’azione scelta è non valida
         if action not in valid_moves:
-            # Penalizziamo mosse invalide (solo training)
             print(f"Invalid action attempted: {action}")
-            return self.board.copy(), REWARDS["invalid"], False, False, {
-                "action_mask": self.get_action_mask()
-            }
+            return self.board.copy(), REWARDS["invalid"], False, False, {}
 
         # Giocatore attuale
         current_player = self.next_player_to_play
@@ -194,12 +164,13 @@ class Connect4Env(gym.Env):
         is_finish = self.is_finish()
         winner = self.get_winner()
 
+        # Ricompense
         if is_finish:
-            if winner == current_player:
-                reward = REWARDS["win"]
-            elif winner == -current_player:
+            if winner == self.opponent_symbol:
                 reward = REWARDS["lose"]
-            else:
+            elif winner == -self.opponent_symbol:
+                reward = REWARDS["win"]
+            elif winner == 0:
                 reward = REWARDS["draw"]
         else:
             reward = REWARDS["valid_move"]
@@ -214,20 +185,15 @@ class Connect4Env(gym.Env):
         self.switch_player()
 
         if is_finish:
-            return self.board.copy(), reward, True, False, {"action_mask": self.get_action_mask()}
+            return self.board.copy(), reward, True, False, {}
 
-        # Opponent
-        if play_opponent and self.opponent is not None:
-            opponent_action = self.opponent.choose_action()
-            obs, opp_reward, done, trunc, info = self.step(opponent_action, play_opponent=False)
-            return obs, -opp_reward, done, trunc, info
+        # Opponent esegue la mossa se esiste ()
+        if play_opponent:
+            self.opponent_step()
 
-        return self.board.copy(), reward, False, False, {"action_mask": self.get_action_mask()}
+        return self.board.copy(), reward, False, False, {}
 
-    # ----------------------
-    # Rendering
-    # ----------------------
-    
+        
     def render(self, screen=None):
         if self.render_mode == "console":
             self.render_console()
@@ -235,29 +201,9 @@ class Connect4Env(gym.Env):
             render_gui(screen, self.get_board())
         else:
             pass
-
-    # def render_console(self):
-    #     print("\nCurrent board:")
-    #     for row in self.board:
-    #         row_str = ""
-    #         for cell in row:
-    #             if cell == 1:
-    #                 row_str += f"{Fore.RED}X{Style.RESET_ALL} | "
-    #             elif cell == -1:
-    #                 row_str += f"{Fore.YELLOW}O{Style.RESET_ALL} | "
-    #             else:
-    #                 row_str += "  | "
-    #         print(row_str[:-2])
-    #     print("‾" * (COLUMNS_COUNT * 4 - 1))
-    #     print("   ".join(str(i) for i in range(COLUMNS_COUNT)))
-    #     print()
-
-
+    
+    # Mostra la board in console con colori
     def render_console(self):
-        """
-        Mostra la board in console con colori:
-        X rosso, O giallo, numeri di riga a sinistra (indice riga e colonna da 0).
-        """
         ROWS, COLS = self.board.shape
         print("\nCurrent board:")
 
@@ -279,6 +225,3 @@ class Connect4Env(gym.Env):
         # etichette colonne
         col_labels = "    " + "   ".join(str(c) for c in range(COLS))
         print(col_labels + "\n")
-
-
-

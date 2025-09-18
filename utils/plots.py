@@ -238,8 +238,6 @@ def plot_offense_summary(off_stats, agent1_name, agent2_name):
 
 
 def show_all_plots():
-    """
-    Mostra tutti i grafici generati.
-    """
+    # Mostra tutti i grafici generati.
     plt.tight_layout()
     plt.show()
