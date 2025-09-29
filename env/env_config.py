@@ -11,6 +11,7 @@ REWARDS = {
     "invalid": -1.0,        # mossa non valida (colonna piena)
     "create_three": 0.4,    # nuova tripletta creata
     "block_three": 0.4      # tripla avversaria bloccata
+    # "create_two": 0.2,      # nuova doppietta creata
 }
 
 # Modalità di rendering

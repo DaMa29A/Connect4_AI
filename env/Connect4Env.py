@@ -5,7 +5,7 @@ from colorama import Fore, Style, init
 init(autoreset=True)
 from gui.gui_rend import render_gui
 from env.env_config import ROWS_COUNT, COLUMNS_COUNT, REWARDS
-from utils.check_rules import is_defensive_move, is_a_triplet, is_a_quadruplet
+from utils.check_rules import is_defensive_move, is_a_triplet, is_a_quadruplet, is_a_pair
 
 class Connect4Env(gym.Env):
     # opponent_symbol: -1 (O) o 1 (X)
@@ -177,6 +177,8 @@ class Connect4Env(gym.Env):
             # Tripletta propria
             if is_a_triplet(self.board, self.last_move_row, self.last_move_col, current_player):
                 reward += REWARDS["create_three"]
+            # elif is_a_pair(self.board, self.last_move_row, self.last_move_col, current_player):
+            #     reward += REWARDS["create_two"]
             # Blocco tripletta avversaria
             if is_defensive_move(self.board, self.last_move_row, self.last_move_col, current_player):
                 reward += REWARDS["block_three"]

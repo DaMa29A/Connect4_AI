@@ -34,6 +34,13 @@ def get_kernels(target_count):
             np.eye(3, dtype=int),
             np.fliplr(np.eye(3, dtype=int))
         ]
+    elif target_count == 2:
+        return [
+            np.array([[1, 1]]),                     # Orizzontale
+            np.array([[1], [1]]),                   # Verticale
+            np.eye(2, dtype=int),                   # Diagonale ↘
+            np.fliplr(np.eye(2, dtype=int))         # Diagonale ↙
+        ]
     else:
         raise ValueError("Unsupported target_count")
 
@@ -107,6 +114,10 @@ def is_a_sequence(board, r, c, current_player, target_count):
 # Controlla se la mossa appena fatta crea una tripla
 def is_a_triplet(board, r, c, current_player):
     return is_a_sequence(board, r, c, current_player, target_count=3)
+
+# Controlla se la mossa appena fatta crea una doppia
+def is_a_pair(board, r, c, current_player):
+    return is_a_sequence(board, r, c, current_player, target_count=2)
 
 # Controlla se la mossa appena fatta crea una quadrupla
 def is_a_quadruplet(board, r, c, current_player):
