@@ -1,7 +1,7 @@
 import pygame
 import numpy as np
-from gui.gui_config import *
-from env.env_config import ROWS_COUNT, COLUMNS_COUNT
+from configs.gui_config import *
+from configs.env_config import ROWS_COUNT, COLUMNS_COUNT
 
 # In Connect4Env.py
 def render_gui(screen, board):

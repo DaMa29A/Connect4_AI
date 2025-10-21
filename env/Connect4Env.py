@@ -4,8 +4,8 @@ from gymnasium import spaces
 from colorama import Fore, Style, init
 init(autoreset=True)
 from gui.gui_rend import render_gui
-from env.env_config import ROWS_COUNT, COLUMNS_COUNT, REWARDS
-from utils.check_rules import is_defensive_move, is_a_triplet, is_a_quadruplet, is_a_pair
+from configs.env_config import ROWS_COUNT, COLUMNS_COUNT, REWARDS
+from utils.check_rules import is_block_triplet, is_a_triplet, is_a_quadruplet, is_a_pair, is_block_pair
 
 class Connect4Env(gym.Env):
     # opponent_symbol: -1 (O) o 1 (X)
@@ -39,11 +39,6 @@ class Connect4Env(gym.Env):
         self.last_move_col = None
         self.winner = None
         
-        # Se l'opponent è X (1), deve iniziare la partita
-        # if self.opponent is not None and self.opponent_symbol == self.first_player:
-        #     self.opponent_step()
-            
-        # borad, info aggiuntive
         return self.board.copy(), {}
     
     def clone(self):
@@ -96,7 +91,8 @@ class Connect4Env(gym.Env):
     # Quando ci sono 4 pedine consecutive restituisce True
     def check_win_around_last_move(self, row, col):
         player = self.board[row, col]
-        return is_a_quadruplet(self.board, row, col, player)
+        # is_a_quadruplet controlla target_count=4
+        return is_a_quadruplet(self.board, row, col, player)[0]
     
     def is_finish(self): 
         self.winner = None # reset winner
@@ -151,9 +147,8 @@ class Connect4Env(gym.Env):
 
         # Controlla se l’azione scelta è non valida
         if action not in valid_moves:
-            print(f"Invalid action attempted: {action}")
             return self.board.copy(), REWARDS["invalid"], False, False, {}
-
+        
         # Giocatore attuale
         current_player = self.next_player_to_play
 
@@ -173,15 +168,28 @@ class Connect4Env(gym.Env):
             elif winner == 0:
                 reward = REWARDS["draw"]
         else:
-            reward = REWARDS["valid_move"]
-            # Tripletta propria
-            if is_a_triplet(self.board, self.last_move_row, self.last_move_col, current_player):
-                reward += REWARDS["create_three"]
-            # elif is_a_pair(self.board, self.last_move_row, self.last_move_col, current_player):
-            #     reward += REWARDS["create_two"]
-            # Blocco tripletta avversaria
-            if is_defensive_move(self.board, self.last_move_row, self.last_move_col, current_player):
+            # --- Ricompense Offensive ---
+            # Crea minaccia da 3
+            if is_a_triplet(self.board, self.last_move_row, self.last_move_col, current_player)[0]:
+                reward = REWARDS["create_three"]
+            # Crea minaccia da 2
+            elif is_a_pair(self.board, self.last_move_row, self.last_move_col, current_player)[0]:
+                reward = REWARDS["create_two"]
+            else:
+                reward = 0.0 
+
+            # --- Ricompense Difensive ---
+            # Blocco vittoria (4-in-fila)
+            if is_block_triplet(self.board, self.last_move_row, self.last_move_col, current_player)[0]:
                 reward += REWARDS["block_three"]
+            # Blocco minaccia da 3
+            elif is_block_pair(self.board, self.last_move_row, self.last_move_col, current_player)[0]:
+                reward += REWARDS["block_two"]
+            else:
+                reward += 0.0
+            
+            if reward == 0.0:
+                reward = REWARDS["valid_move"]
 
         # Cambia turno
         self.switch_player()
@@ -189,7 +197,7 @@ class Connect4Env(gym.Env):
         if is_finish:
             return self.board.copy(), reward, True, False, {}
 
-        # Opponent esegue la mossa se esiste ()
+        # Opponent esegue la mossa se esiste
         if play_opponent:
             self.opponent_step()
 

@@ -2,14 +2,14 @@ import numpy as np
 import torch
 from .Agent import Agent
 from stable_baselines3 import DQN
-from .rl_config import MODEL_PATH_DQN
+from configs.rl_config import MODEL_PATH_DQN
 
 class DQNAgent(Agent):
-    def __init__(self, env, deterministic=True, device="auto"):
+    def __init__(self, env, deterministic=True, device="auto", path = MODEL_PATH_DQN):
         super().__init__(env)
         self.name = "DQN"
         self.deterministic = deterministic
-        self.model = DQN.load(MODEL_PATH_DQN, device=device)
+        self.model = DQN.load(path, device=device)
 
     def choose_action(self):
         valid_moves = self.env.get_valid_actions()

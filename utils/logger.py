@@ -75,8 +75,8 @@ def write_final_stats(f, results, def_stats, attack_stats, agent1_name, agent2_n
         f.write(f"{name} ({symbol}): Occasioni: {occ} | Completate: {succ} | Fallite: {miss} | Percentuale: {perc:.2f}%\n")
 
 def write_opportunity(f, kind, player_symbol, row, col):
-    f.write(f"[{kind}] opportunity for {player_symbol} at r{row},c{col}\n")
+    #f.write(f"[{kind}] opportunity for {player_symbol} at r{row},c{col}\n")
+    pass
 
 def write_success(f, kind, player_symbol, row, col):
     f.write(f"[{kind}] SUCCESS by {player_symbol} at r{row},c{col}\n")
-

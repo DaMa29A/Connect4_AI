@@ -2,14 +2,14 @@ import numpy as np
 import torch
 from .Agent import Agent
 from stable_baselines3 import PPO
-from .rl_config import MODEL_PATH_PPO
+from configs.rl_config import MODEL_PATH_PPO
 
 class PPOAgent(Agent):
-    def __init__(self, env, deterministic=True, device="auto"):
+    def __init__(self, env, deterministic=True, device="auto", path = MODEL_PATH_PPO):
         super().__init__(env)
         self.name = "PPO"
         self.deterministic = deterministic
-        self.model = PPO.load(MODEL_PATH_PPO, device=device)
+        self.model = PPO.load(path, device=device)
 
     def choose_action(self):
         valid_moves = self.env.get_valid_actions()

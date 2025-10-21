@@ -1,7 +1,7 @@
 import numpy as np
 from .Agent import Agent
 from gui.gui_rend import check_gui_event
-from env.env_config import COLUMNS_COUNT
+from configs.env_config import COLUMNS_COUNT
 
 class HumanAgent(Agent):
     def __init__(self, env):

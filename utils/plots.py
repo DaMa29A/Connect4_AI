@@ -1,15 +1,26 @@
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
+import os # Importa os per gestire i percorsi
+
+# Costanti Colori
+COLOR_AGENT1 = "#ff4d4d"
+COLOR_AGENT2 = "#ffd966"
+COLOR_DRAW = "#cccccc"
+COLOR_DEFENSE_SUCCESS = "#90ee90"
+COLOR_DEFENSE_FAIL = "#ff9999"
+COLOR_OFFENSE_SUCCESS = "#6495ED"
+COLOR_OFFENSE_FAIL = "#FFB6C1"
+COLOR_NO_DATA = "#d3d3d3"
 
 
-def plot_match_results(results, agent1_name, agent2_name):
+def plot_match_results(results, agent1_name, agent2_name, output_path=None):
     """
-    Visualizza un grafico a barre con le vittorie e i pareggi,
+    Visualizza e/o salva un grafico a barre con le vittorie e i pareggi,
     affiancato da un grafico a torta con le percentuali.
     """
     agent_names = [agent1_name, agent2_name, "Pareggi"]
     win_counts = [results["X"], results["O"], results["Draw"]]
-    colors = ["#ff4d4d", "#ffd966", "#cccccc"]
+    colors = [COLOR_AGENT1, COLOR_AGENT2, COLOR_DRAW]
 
     total = sum(win_counts)
     fig = plt.figure(figsize=(10, 5))
@@ -24,7 +35,7 @@ def plot_match_results(results, agent1_name, agent2_name):
     # Grafico a torta
     ax_pie = fig.add_subplot(gs[1])
     if total == 0:
-        ax_pie.pie([1], labels=["Nessun dato"], colors=["#d3d3d3"])
+        ax_pie.pie([1], labels=["Nessun dato"], colors=[COLOR_NO_DATA])
     else:
         ax_pie.pie(
             win_counts,
@@ -36,39 +47,16 @@ def plot_match_results(results, agent1_name, agent2_name):
     ax_pie.set_title("Distribuzione % Vittorie/Pareggi")
 
     plt.tight_layout()
+    
+    # --- MODIFICA AGGIUNTA ---
+    if output_path:
+        fig.savefig(output_path)
+    # -------------------------
+    
     return fig
 
 
-def plot_defensive_stats(def_stats, agent1_name, agent2_name):
-    """
-    Visualizza un grafico a barre con le difese riuscite e mancate.
-    """
-    labels = [agent1_name, agent2_name]
-    success = [def_stats["X"]["success"], def_stats["O"]["success"]]
-    fail = [
-        def_stats["X"]["occasions"] - def_stats["X"]["success"],
-        def_stats["O"]["occasions"] - def_stats["O"]["success"]
-    ]
-    x = range(len(labels))
-    bar_width = 0.4
-
-    fig, ax = plt.subplots(figsize=(6, 5))
-    bars_success = ax.bar([i - bar_width/2 for i in x], success, width=bar_width, label="Riuscite", color="#90ee90")
-    bars_fail = ax.bar([i + bar_width/2 for i in x], fail, width=bar_width, label="Mancate", color="#ff9999")
-
-    ax.set_xticks(x)
-    ax.set_xticklabels(labels)
-    ax.set_title("Difese Totali")
-    ax.legend()
-    ax.bar_label(bars_success, labels=[str(v) for v in success], padding=3)
-    ax.bar_label(bars_fail, labels=[str(v) for v in fail], padding=3)
-    return fig, ax
-
-
-def plot_defense_summary(def_stats, agent1_name, agent2_name):
-    import matplotlib.pyplot as plt
-    import matplotlib.patches as patches
-
+def plot_defense_summary(def_stats, agent1_name, agent2_name, output_path=None):
     labels = [agent1_name, agent2_name]
     success = [def_stats["X"]["success"], def_stats["O"]["success"]]
     fail = [
@@ -77,6 +65,7 @@ def plot_defense_summary(def_stats, agent1_name, agent2_name):
     ]
     bar_width = 0.4
     x = range(len(labels))
+    pie_colors = [COLOR_DEFENSE_SUCCESS, COLOR_DEFENSE_FAIL]
 
     fig = plt.figure(figsize=(12, 6))
     gs = fig.add_gridspec(2, 3, width_ratios=[2, 0.1, 1])
@@ -84,9 +73,9 @@ def plot_defense_summary(def_stats, agent1_name, agent2_name):
     # Grafico a barre
     ax_bar = fig.add_subplot(gs[:, 0])
     bars_success = ax_bar.bar([i - bar_width/2 for i in x], success, width=bar_width,
-                              label="Riuscite", color="#90ee90")
+                              label="Riuscite", color=COLOR_DEFENSE_SUCCESS)
     bars_fail = ax_bar.bar([i + bar_width/2 for i in x], fail, width=bar_width,
-                           label="Mancate", color="#ff9999")
+                           label="Mancate", color=COLOR_DEFENSE_FAIL)
     ax_bar.set_xticks(x)
     ax_bar.set_xticklabels(labels)
     ax_bar.set_title("Difese Totali")
@@ -98,67 +87,52 @@ def plot_defense_summary(def_stats, agent1_name, agent2_name):
     ax_pie1 = fig.add_subplot(gs[0, 2])
     total1 = success[0] + fail[0]
     if total1 == 0:
-        ax_pie1.pie([1], labels=["Nessuna occasione"], colors=["#d3d3d3"])
+        ax_pie1.pie([1], labels=["Nessuna occasione"], colors=[COLOR_NO_DATA])
     else:
         ax_pie1.pie(
             [success[0], fail[0]],
             labels=["Riuscite", "Mancate"],
             autopct="%1.1f%%",
-            colors=["#90ee90", "#ff9999"],
+            colors=pie_colors,
             startangle=90
         )
     ax_pie1.set_title(f"{agent1_name} - % Difese")
 
     # Riquadro attorno a pie1
-    box1 = patches.FancyBboxPatch(
-        (0, 0), 1, 1,
-        boxstyle="round,pad=0.02",
-        edgecolor="gray",
-        facecolor="none",
-        linewidth=1.5,
-        transform=ax_pie1.transAxes
-    )
+    box1 = patches.FancyBboxPatch((0, 0), 1, 1, boxstyle="round,pad=0.02", edgecolor="gray", facecolor="none", linewidth=1.5, transform=ax_pie1.transAxes)
     ax_pie1.add_patch(box1)
 
     # Grafico a torta per agent2 (in basso a destra)
     ax_pie2 = fig.add_subplot(gs[1, 2])
     total2 = success[1] + fail[1]
     if total2 == 0:
-        ax_pie2.pie([1], labels=["Nessuna occasione"], colors=["#d3d3d3"])
+        ax_pie2.pie([1], labels=["Nessuna occasione"], colors=[COLOR_NO_DATA])
     else:
         ax_pie2.pie(
             [success[1], fail[1]],
             labels=["Riuscite", "Mancate"],
             autopct="%1.1f%%",
-            colors=["#90ee90", "#ff9999"],
+            colors=pie_colors,
             startangle=90
         )
     ax_pie2.set_title(f"{agent2_name} - % Difese")
 
     # Riquadro attorno a pie2
-    box2 = patches.FancyBboxPatch(
-        (0, 0), 1, 1,
-        boxstyle="round,pad=0.02",
-        edgecolor="gray",
-        facecolor="none",
-        linewidth=1.5,
-        transform=ax_pie2.transAxes
-    )
+    box2 = patches.FancyBboxPatch((0, 0), 1, 1, boxstyle="round,pad=0.02", edgecolor="gray", facecolor="none", linewidth=1.5, transform=ax_pie2.transAxes)
     ax_pie2.add_patch(box2)
 
     plt.tight_layout()
+    
+    # --- MODIFICA AGGIUNTA ---
+    if output_path:
+        fig.savefig(output_path)
+    # -------------------------
+    
     return fig
 
 
 
-def plot_offense_summary(off_stats, agent1_name, agent2_name):
-    """
-    Visualizza grafico con occasioni offensive create e convertite,
-    con barre e grafici a torta per ogni agente.
-    """
-    import matplotlib.pyplot as plt
-    import matplotlib.patches as patches
-
+def plot_offense_summary(off_stats, agent1_name, agent2_name, output_path=None):
     labels = [agent1_name, agent2_name]
     success = [off_stats["X"]["success"], off_stats["O"]["success"]]
     fail = [
@@ -167,6 +141,7 @@ def plot_offense_summary(off_stats, agent1_name, agent2_name):
     ]
     bar_width = 0.4
     x = range(len(labels))
+    pie_colors = [COLOR_OFFENSE_SUCCESS, COLOR_OFFENSE_FAIL]
 
     fig = plt.figure(figsize=(12, 6))
     gs = fig.add_gridspec(2, 3, width_ratios=[2, 0.1, 1])
@@ -174,10 +149,9 @@ def plot_offense_summary(off_stats, agent1_name, agent2_name):
     # Grafico a barre (sinistra)
     ax_bar = fig.add_subplot(gs[:, 0])
     bars_success = ax_bar.bar([i - bar_width/2 for i in x], success, width=bar_width,
-                              label="Convertite", color="#6495ED")
+                              label="Convertite", color=COLOR_OFFENSE_SUCCESS)
     bars_fail = ax_bar.bar([i + bar_width/2 for i in x], fail, width=bar_width,
-                           label="Non sfruttate", color="#FFB6C1")
-
+                           label="Non sfruttate", color=COLOR_OFFENSE_FAIL)
     ax_bar.set_xticks(x)
     ax_bar.set_xticklabels(labels)
     ax_bar.set_title("Statistiche Offensive Totali")
@@ -189,51 +163,43 @@ def plot_offense_summary(off_stats, agent1_name, agent2_name):
     ax_pie1 = fig.add_subplot(gs[0, 2])
     total1 = success[0] + fail[0]
     if total1 == 0:
-        ax_pie1.pie([1], labels=["Nessuna occasione"], colors=["#d3d3d3"])
+        ax_pie1.pie([1], labels=["Nessuna occasione"], colors=[COLOR_NO_DATA])
     else:
         ax_pie1.pie(
             [success[0], fail[0]],
             labels=["Convertite", "Non sfruttate"],
             autopct="%1.1f%%",
-            colors=["#6495ED", "#FFB6C1"],
+            colors=pie_colors,
             startangle=90
         )
     ax_pie1.set_title(f"{agent1_name} - % Attacchi")
-    box1 = patches.FancyBboxPatch(
-        (0, 0), 1, 1,
-        boxstyle="round,pad=0.02",
-        edgecolor="gray",
-        facecolor="none",
-        linewidth=1.5,
-        transform=ax_pie1.transAxes
-    )
+    box1 = patches.FancyBboxPatch((0, 0), 1, 1, boxstyle="round,pad=0.02", edgecolor="gray", facecolor="none", linewidth=1.5, transform=ax_pie1.transAxes)
     ax_pie1.add_patch(box1)
 
     # Grafico a torta per agent2 (in basso a destra)
     ax_pie2 = fig.add_subplot(gs[1, 2])
     total2 = success[1] + fail[1]
     if total2 == 0:
-        ax_pie2.pie([1], labels=["Nessuna occasione"], colors=["#d3d3d3"])
+        ax_pie2.pie([1], labels=["Nessuna occasione"], colors=[COLOR_NO_DATA])
     else:
         ax_pie2.pie(
             [success[1], fail[1]],
             labels=["Convertite", "Non sfruttate"],
             autopct="%1.1f%%",
-            colors=["#6495ED", "#FFB6C1"],
+            colors=pie_colors,
             startangle=90
         )
     ax_pie2.set_title(f"{agent2_name} - % Attacchi")
-    box2 = patches.FancyBboxPatch(
-        (0, 0), 1, 1,
-        boxstyle="round,pad=0.02",
-        edgecolor="gray",
-        facecolor="none",
-        linewidth=1.5,
-        transform=ax_pie2.transAxes
-    )
+    box2 = patches.FancyBboxPatch((0, 0), 1, 1, boxstyle="round,pad=0.02", edgecolor="gray", facecolor="none", linewidth=1.5, transform=ax_pie2.transAxes)
     ax_pie2.add_patch(box2)
 
     plt.tight_layout()
+    
+    # --- MODIFICA AGGIUNTA ---
+    if output_path:
+        fig.savefig(output_path)
+    # -------------------------
+
     return fig
 
 

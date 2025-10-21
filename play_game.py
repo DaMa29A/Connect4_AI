@@ -3,17 +3,21 @@ from agents.HumanAgent import HumanAgent
 from agents.RandomAgent import RandomAgent
 from agents.RuleBasedL1Agent import RuleBasedL1Agent
 from agents.RuleBasedL2Agent import RuleBasedL2Agent
+from agents.RB_L1Agent import RBL1Agent
+from agents.RB_L2Agent import RBL2Agent
+from agents.RB_L3Agent import RBL3Agent
+from agents.PPOAgent import PPOAgent
 # from agents.DQNAgent import DQNAgent
 # from agents.PPOAgent import PPOAgent
 from gui.gui_rend import start_gui, show_results
-from env.env_config import RENDER_MODE
 
 
 def main():
-    env = Connect4Env(render_mode=RENDER_MODE) # render_mode can be "console" or "gui"
+    env = Connect4Env(render_mode="gui") # render_mode can be "console" or "gui"
 
     agent1 = HumanAgent(env)         # Player 1 (X)
-    agent2 = RandomAgent(env)        # Player 2 (O)
+    agent2 = RBL1Agent(env)        # Player 2 (O)
+    #agent2 = PPOAgent(env)
 
     print("Welcome to Connect4!")
     print(f"Player 1 (X): {agent1.getName()}")
@@ -33,7 +37,7 @@ def main():
         current_agent = agent1 if env.next_player_to_play == 1 else agent2
         action = current_agent.choose_action()
         obs, reward, done, _, _ = env.step(action)
-        
+        #print(f"Reward {current_agent.getName()}: {reward}")
         #env.render()
         if env.render_mode == "console":
             env.render()
