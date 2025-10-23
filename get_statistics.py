@@ -230,8 +230,8 @@ if __name__ == "__main__":
     # run_match(PPOAgent, RuleBasedL1Agent)
     # run_match(PPOAgent, RuleBasedL2Agent)
 
-    run_match(DQNAgent, PPOAgent)
-    run_match(PPOAgent, DQNAgent)
+    # run_match(DQNAgent, PPOAgent)
+    # run_match(PPOAgent, DQNAgent)
 
     print("\n--- Tutte le simulazioni completate ---")
 

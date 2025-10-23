@@ -3,9 +3,6 @@ from agents.HumanAgent import HumanAgent
 from agents.RandomAgent import RandomAgent
 from agents.RuleBasedL1Agent import RuleBasedL1Agent
 from agents.RuleBasedL2Agent import RuleBasedL2Agent
-from agents.RB_L1Agent import RBL1Agent
-from agents.RB_L2Agent import RBL2Agent
-from agents.RB_L3Agent import RBL3Agent
 from agents.PPOAgent import PPOAgent
 # from agents.DQNAgent import DQNAgent
 # from agents.PPOAgent import PPOAgent
@@ -13,10 +10,10 @@ from gui.gui_rend import start_gui, show_results
 
 
 def main():
-    env = Connect4Env(render_mode="gui") # render_mode can be "console" or "gui"
+    env = Connect4Env(render_mode="console") # render_mode can be "console" or "gui"
 
     agent1 = HumanAgent(env)         # Player 1 (X)
-    agent2 = RBL1Agent(env)        # Player 2 (O)
+    agent2 = RandomAgent(env)        # Player 2 (O)
     #agent2 = PPOAgent(env)
 
     print("Welcome to Connect4!")

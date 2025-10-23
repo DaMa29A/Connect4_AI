@@ -4,8 +4,6 @@ from env.Connect4Env import Connect4Env
 from agents.RandomAgent import RandomAgent
 from agents.RuleBasedL1Agent import RuleBasedL1Agent
 from agents.RuleBasedL2Agent import RuleBasedL2Agent
-from agents.RBL1Agent import RBL1Agent
-from agents.RBL2Agent import RBL2Agent
 from agents.DQNAgent import DQNAgent
 from agents.PPOAgent import PPOAgent
 import configs.dqn_config as dqn_cfg
