@@ -123,10 +123,8 @@ def plot_defense_summary(def_stats, agent1_name, agent2_name, output_path=None):
 
     plt.tight_layout()
     
-    # --- MODIFICA AGGIUNTA ---
     if output_path:
         fig.savefig(output_path)
-    # -------------------------
     
     return fig
 
@@ -195,10 +193,8 @@ def plot_offense_summary(off_stats, agent1_name, agent2_name, output_path=None):
 
     plt.tight_layout()
     
-    # --- MODIFICA AGGIUNTA ---
     if output_path:
         fig.savefig(output_path)
-    # -------------------------
 
     return fig
 

@@ -15,26 +15,26 @@ class RuleBasedL2Agent(Agent):
 
         my_id = self.env.next_player_to_play
 
-        # --- Livello 1: Mossa vincente (target_count=4) ---
+        # Mossa vincente (target_count=4) ---
         possible_win_moves = []
         winning_moves = check_attack_opportunities(self.env.board, my_id, target_count=4)
         for r, c, _ in winning_moves:
             if self.env.is_playable_cell(r, c):
-                possible_win_moves.append(c) # Gather
+                possible_win_moves.append(c) 
 
         if possible_win_moves:
-            return np.random.choice(possible_win_moves) # Choose
+            return np.random.choice(possible_win_moves) 
 
-        # --- Livello 2: Blocca mossa vincente dell’avversario (target_count=4) ---
+        # Blocca mossa vincente dell’avversario (target_count=4) ---
         possible_defense_moves = []
         defensive_moves = check_defensive_opportunities(self.env.board, my_id, target_count=4)
         for r, c, _ in defensive_moves:
             if self.env.is_playable_cell(r, c):
-                possible_defense_moves.append(c) # Gather
+                possible_defense_moves.append(c)
 
         if possible_defense_moves:
-            return np.random.choice(possible_defense_moves) # Choose
+            return np.random.choice(possible_defense_moves)
 
-        # --- Livello 3: Mossa casuale ---
+        # Mossa casuale ---
         # If no winning or blocking moves were found
         return np.random.choice(valid_moves)

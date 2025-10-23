@@ -12,13 +12,12 @@ from utils.BoardStats import BoardStats
 from utils.logger import *
 from utils.plots import *
 
-# --- Impostazioni Globali ---
+
 NUM_GAMES = 500  # Numero di partite per ogni match-up
 BASE_LOG_DIR = "./logs"
 BASE_IMAGE_DIR = os.path.join(BASE_LOG_DIR, "images")
 RENDER_MODE = None # "console" or None
 
-# --- NUOVA FUNZIONE PARAMETRIZZATA ---
 def run_match(agent1_class, agent2_class):
     """
     Esegue NUM_GAMES partite tra due tipi di agenti specificati
@@ -75,10 +74,10 @@ def run_match(agent1_class, agent2_class):
     attack_stats = {"X": {"occasions": 0, "success": 0}, "O": {"occasions": 0, "success": 0}}
     board_stats = BoardStats()
 
-    # --- Ciclo Principale delle Partite ---
-    # Rimuovi il vecchio log se esiste (opzionale, potresti volerli tenere)
+    # --- Partite ---
+    # Rimuovi il vecchio log se esiste 
     if os.path.exists(log_file_path):
-         os.remove(log_file_path) # Rimuove solo il log specifico per questa run
+         os.remove(log_file_path) 
 
     with open(log_file_path, "w", encoding="utf-8") as f:
         write_header(f, agent_names["X"], agent_names["O"])
@@ -106,7 +105,7 @@ def run_match(agent1_class, agent2_class):
                 action = agent.choose_action()
                 
                 # Gestisci caso HumanAgent che potrebbe non avere row/col subito
-                row, col = -1, -1 # Valori di default
+                row, col = -1, -1 
                 if isinstance(agent, HumanAgent):
                      col = action 
                      # Row viene calcolata dopo play_action, ma per il log serve prima
@@ -120,11 +119,10 @@ def run_match(agent1_class, agent2_class):
                 # Controlla se la mossa è valida prima di procedere
                 if row is None or col < 0:
                      print(f"Errore: Mossa non valida tentata da {agent_name} (Col: {col}). Salto turno?")
-                     # Potresti gestire l'errore qui, es. forzando una mossa casuale valida
                      valid_actions = env.get_valid_actions()
-                     if not valid_actions: # Nessuna mossa valida rimasta -> Pareggio?
+                     if not valid_actions:
                           done = True
-                          env.winner = 0 # Assumiamo pareggio
+                          env.winner = 0 
                           break
                      action = np.random.choice(valid_actions)
                      row = env.get_first_empty_row(action)
@@ -207,14 +205,8 @@ def run_match(agent1_class, agent2_class):
         print("Grafici salvati.")
     except Exception as e:
          print(f"Errore durante il salvataggio dei grafici: {e}")
-         # Considera se mostrare comunque i grafici in caso di errore di salvataggio
-         # show_all_plots()
-
-    # Opzionale: Mostra i grafici a schermo alla fine di ogni match-up
-    # show_all_plots()
 
 
-# --- ESECUZIONE DEI MATCH-UP ---
 if __name__ == "__main__":
     # Assicurati che le cartelle base esistano
     if not os.path.exists(BASE_LOG_DIR):
@@ -234,7 +226,3 @@ if __name__ == "__main__":
     # run_match(PPOAgent, DQNAgent)
 
     print("\n--- Tutte le simulazioni completate ---")
-
-    # Opzionale: Mostra tutti i grafici insieme alla fine di tutte le run
-    # import matplotlib.pyplot as plt
-    # plt.show() # Mostra tutte le figure create e non chiuse
