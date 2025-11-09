@@ -180,26 +180,26 @@ def run_match(agent1_class, agent2_class, agent1_kwargs={}, agent2_kwargs={}, co
 
 if __name__ == "__main__":
     # PPO Matches
-    CONFIG_PPO = "config_5"
-    PPO_PATH = get_model_path("ppo", CONFIG_PPO)
-    ppo_kwargs = {"model_path": PPO_PATH, "deterministic": True}
+    # CONFIG_PPO = "config_5"
+    # PPO_PATH = get_model_path("ppo", CONFIG_PPO)
+    # ppo_kwargs = {"model_path": PPO_PATH, "deterministic": True}
 
-    run_match(PPOAgent, RandomAgent, agent1_kwargs=ppo_kwargs, config=CONFIG_PPO)
-    run_match(PPOAgent, RuleBasedL1_2Agent, agent1_kwargs=ppo_kwargs, config=CONFIG_PPO)
-    run_match(PPOAgent, RuleBasedL2Agent, agent1_kwargs=ppo_kwargs, config=CONFIG_PPO)
+    # run_match(PPOAgent, RandomAgent, agent1_kwargs=ppo_kwargs, config=CONFIG_PPO)
+    # run_match(PPOAgent, RuleBasedL1_2Agent, agent1_kwargs=ppo_kwargs, config=CONFIG_PPO)
+    # run_match(PPOAgent, RuleBasedL2Agent, agent1_kwargs=ppo_kwargs, config=CONFIG_PPO)
 
     # DQN Matches
-    # CONFIG_DQN = "config_5"
-    # DQN_PATH = get_model_path("dqn", CONFIG_DQN)
-    # dqn_kwargs = {"model_path": DQN_PATH, "deterministic": True}
+    CONFIG_DQN = "config_5"
+    DQN_PATH = get_model_path("dqn", CONFIG_DQN)
+    dqn_kwargs = {"model_path": DQN_PATH, "deterministic": True}
 
-    # run_match(DQNAgent, RandomAgent, agent1_kwargs=dqn_kwargs, config=CONFIG_DQN)
-    # run_match(DQNAgent, RuleBasedL1_2Agent, agent1_kwargs=dqn_kwargs, config=CONFIG_DQN)
-    # run_match(DQNAgent, RuleBasedL2Agent, agent1_kwargs=dqn_kwargs, config=CONFIG_DQN)
+    run_match(DQNAgent, RandomAgent, agent1_kwargs=dqn_kwargs, config=CONFIG_DQN)
+    run_match(DQNAgent, RuleBasedL1_2Agent, agent1_kwargs=dqn_kwargs, config=CONFIG_DQN)
+    run_match(DQNAgent, RuleBasedL2Agent, agent1_kwargs=dqn_kwargs, config=CONFIG_DQN)
 
     # PPO vs DQN Matches
-    # CONFIG_PPO = "config_2"
-    # CONFIG_DQN = "config_3"
+    # CONFIG_PPO = "config_5"
+    # CONFIG_DQN = "config_5"
     # PPO_PATH = get_model_path("ppo", CONFIG_PPO)
     # DQN_PATH = get_model_path("dqn", CONFIG_DQN)
     # ppo_kwargs = {"model_path": PPO_PATH, "deterministic": True}
