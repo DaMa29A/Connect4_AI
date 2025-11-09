@@ -1,19 +1,13 @@
 import pygame
 
-# Dimensioni
-SQUARESIZE = 100
-RADIUS = int(SQUARESIZE / 2.5)
-WIDTH = 7 * SQUARESIZE
-HEIGHT = (6 + 1) * SQUARESIZE
-SIZE = (WIDTH, HEIGHT)
+# Dimensions
+SQUARE_SIZE = 80
+RADIUS = int(SQUARE_SIZE / 2 * 0.85)
+OFFSET_TOP = SQUARE_SIZE # Text space
 
-# Colori
-BLUE = (0, 0, 255)
-LIGHT_BLUE = (135, 206, 250)
-BLACK = (0, 0, 0)
-RED = (255, 0, 0)
-YELLOW = (255, 255, 0)
-
-# Font
-pygame.font.init()
-FONT = pygame.font.SysFont("monospace", 50)
+# Colors
+COLOR_RED = (220, 20, 20)
+COLOR_YELLOW = (220, 220, 20)
+COLOR_LIGHT_BLUE = (135, 206, 250) # background
+COLOR_BLUE = (0, 0, 255)         # board
+COLOR_HIGHLIGHT = (255, 255, 255, 75)

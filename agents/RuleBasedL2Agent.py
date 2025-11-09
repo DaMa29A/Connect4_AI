@@ -1,40 +1,48 @@
 import numpy as np
 from .Agent import Agent
-from utils.check_rules import check_attack_opportunities, check_defensive_opportunities
+from utils.check_rules import check_attack_opportunities, check_defensive_opportunities, is_playable
 
 class RuleBasedL2Agent(Agent):
-    def __init__(self, env):
-        super().__init__(env)
-        self.name = "Rule-Based L2"
+    def __init__(self, name="RuleBased_L2", player_symbol=None):
+        super().__init__(name=name, player_symbol=player_symbol)
+        if player_symbol is None:
+            raise ValueError("RuleBased needs player_symbol (1 o -1).")
 
-    def choose_action(self):
-        valid_moves = self.env.get_valid_actions()
-        # Handle the case where there are no valid moves
-        if not valid_moves:
-            return 0
+    def choose_action(self, obs, action_mask):
+        # Get all available cols
+        valid_cols = np.where(action_mask == 1)[0]
+        if len(valid_cols) == 0:
+            raise RuntimeError("No valid actions available")
 
-        my_id = self.env.next_player_to_play
+        # Agent symbol
+        my_id = self.player_symbol
 
-        # Mossa vincente (target_count=4) ---
+        # 1. Randomly selects one of the columns that guarantee a win. ---
         possible_win_moves = []
-        winning_moves = check_attack_opportunities(self.env.board, my_id, target_count=4)
+        winning_moves = check_attack_opportunities(obs, my_id, target_count=4)
         for r, c, _ in winning_moves:
-            if self.env.is_playable_cell(r, c):
+            if is_playable(obs, r, c):
                 possible_win_moves.append(c) 
 
         if possible_win_moves:
-            return np.random.choice(possible_win_moves) 
+            valid_win_moves = [m for m in possible_win_moves if m in valid_cols]
+            if valid_win_moves:
+                #return np.random.choice(valid_win_moves) 
+                return self.rng.choice(valid_win_moves)
 
-        # Blocca mossa vincente dell’avversario (target_count=4) ---
+        # 2. Randomly selects one of the columns that block the opponent's immediate win. ---
         possible_defense_moves = []
-        defensive_moves = check_defensive_opportunities(self.env.board, my_id, target_count=4)
+        defensive_moves = check_defensive_opportunities(obs, my_id, target_count=4)
         for r, c, _ in defensive_moves:
-            if self.env.is_playable_cell(r, c):
+            if is_playable(obs, r, c):
                 possible_defense_moves.append(c)
 
         if possible_defense_moves:
-            return np.random.choice(possible_defense_moves)
+            valid_defense_moves = [m for m in possible_defense_moves if m in valid_cols]
+            if valid_defense_moves:
+                #return np.random.choice(valid_defense_moves)
+                return self.rng.choice(valid_defense_moves)
 
-        # Mossa casuale ---
-        # If no winning or blocking moves were found
-        return np.random.choice(valid_moves)
+        # 3. Random choice. ---
+        #return np.random.choice(valid_cols)
+        return self.rng.choice(valid_cols)

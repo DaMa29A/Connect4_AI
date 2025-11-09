@@ -1,8 +1,7 @@
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
-import os # Importa os per gestire i percorsi
 
-# Costanti Colori
+# Colors
 COLOR_AGENT1 = "#ff4d4d"
 COLOR_AGENT2 = "#ffd966"
 COLOR_DRAW = "#cccccc"

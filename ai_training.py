@@ -1,108 +1,241 @@
 import os
+import time
+import gymnasium as gym
 from stable_baselines3 import DQN, PPO
-from env.Connect4Env import Connect4Env
+from sb3_contrib import MaskablePPO
+from stable_baselines3.common.vec_env import DummyVecEnv
+from stable_baselines3.common.monitor import Monitor
+from colorama import Fore, Style, init
+init(autoreset=True)
+from env.Connect4Env import Connect4Env 
 from agents.RandomAgent import RandomAgent
 from agents.RuleBasedL1Agent import RuleBasedL1Agent
+from agents.RuleBasedL1_2Agent import RuleBasedL1_2Agent
 from agents.RuleBasedL2Agent import RuleBasedL2Agent
+from sb3_contrib.common.wrappers import ActionMasker
 from agents.DQNAgent import DQNAgent
-from agents.PPOAgent import PPOAgent
-import configs.dqn_config as dqn_cfg
-import configs.ppo_config as ppo_cfg
-from get_statistics import run_match
+from configs.paths_config import create_paths
+from configs.env_config import SEED
+from configs.dqn_config import DQN_CONFIGS, POLICY as DQN_POLICY
+from configs.ppo_config import PPO_CONFIGS, POLICY as PPO_POLICY
 
+def get_mask_from_env(env):
+    return env.unwrapped.get_action_mask()
 
-def train_ai(algorithm, time_steps, opponent, first_move_random, who_start):
-    opponent_name = opponent(None).getName() if opponent else "N/A"
-    env = Connect4Env(
-        opponent_symbol=-who_start, 
-        opponent=opponent, 
-        render_mode=None, 
-        first_move_random=first_move_random)
+# --- Custom wrapper to control first column choice ---
+class LogFirstActionWrapper(gym.Wrapper):
+    def __init__(self, env):
+        super().__init__(env)
+        self.first_action_logged = False # Flag
 
-    if algorithm == "DQN":
-        model_path = dqn_cfg.MODEL_PATH
-        
-        if os.path.exists(model_path):
-            print(f"Carico modello DQN da {model_path} e continuo l'allenamento...")
-            model = DQN.load(model_path, env=env)
-        else:
-            print(f"Creo nuovo modello DQN...")
-            model = DQN(
-                policy=dqn_cfg.POLICY,
-                env=env,
-                learning_rate=dqn_cfg.LEARNING_RATE,
-                buffer_size=dqn_cfg.BUFFER_SIZE,
-                batch_size=dqn_cfg.BATCH_SIZE,
-                gamma=dqn_cfg.GAMMA,
-                target_update_interval=dqn_cfg.TARGET_UPDATE_INTERVAL,
-                exploration_initial_eps=dqn_cfg.EXPLORATION_INITIAL_EPS,
-                exploration_final_eps=dqn_cfg.EXPLORATION_FINAL_EPS,
-                exploration_fraction=dqn_cfg.EXPLORATION_FRACTION,
-                policy_kwargs=dqn_cfg.POLICY_KWARGS,
-                verbose=dqn_cfg.VERBOSE,
-                tensorboard_log=dqn_cfg.TENSORBOARD_LOG
-            )
-        
-        model.learn(
-            total_timesteps=time_steps,
-            reset_num_timesteps=False,
-            tb_log_name=f"DQN_vs_{opponent_name}"
+    def reset(self, **kwargs):
+        obs, info = self.env.reset(**kwargs)
+        self.first_action_logged = False
+        return obs, info
+
+    def step(self, action):
+        # Check if first episode step
+        if not self.first_action_logged:
+            print(f"First column choice: {action}")
+            self.first_action_logged = True
+        return self.env.step(action)
+
+# --- DQN Training ---
+def train_dqn(config_name, opponent_class, who_am_i, first_move_random, total_timesteps):
+    print(f"{Fore.GREEN}--- Starting DQN Training [{config_name}] ---{Style.RESET_ALL}")
+
+    # Get opponent name
+    opponent_name = opponent_class(player_symbol=0).getName() if opponent_class else "N/A"
+    
+    # Check if config exist
+    try:
+        config = DQN_CONFIGS[config_name]
+    except KeyError:
+        print(f"{Fore.RED}Error: '{config_name}' NOT found in DQN.{Style.RESET_ALL}")
+        return
+
+    # Paths
+    model_file_path, tf_dir_path, ts_file_path, monitor_dir = create_paths("dqn", opponent_name, config_name)
+
+    #
+    class_name = opponent_class.__name__
+    model_to_load = None
+    if class_name == "DQNAgent" or class_name == "PPOAgent":
+        model_to_load = model_file_path
+
+    # Env
+    env = Connect4Env(opponent_class=opponent_class, who_am_i=who_am_i, first_move_random=first_move_random, model_path=model_to_load)
+    env = Monitor(env, filename=monitor_dir)
+    env = LogFirstActionWrapper(env)
+    env = DummyVecEnv([lambda: env])
+
+    # --- Load/Create Model ---
+    if os.path.exists(model_file_path):
+        print(f"{Fore.CYAN}Load DQN model '{model_file_path}' ...{Style.RESET_ALL}")
+        model = DQN.load(
+            model_file_path, 
+            env = env,
+            tensorboard_log = tf_dir_path
         )
-        model.save(model_path)
-        print(f"Modello DQN salvato in {model_path}")
-
-    elif algorithm == "PPO":
-        model_path = ppo_cfg.MODEL_PATH
-
-        if os.path.exists(model_path):
-            print(f"Carico modello PPO da {model_path} e continuo l'allenamento...")
-            model = PPO.load(model_path, env=env)
-        else:
-            print(f"Creo nuovo modello PPO...")
-            # Usa i parametri dal file di config ppo_cfg
-            model = PPO(
-                policy=ppo_cfg.POLICY,
-                env=env,
-                learning_rate=ppo_cfg.LEARNING_RATE, 
-                n_steps=ppo_cfg.N_STEPS,
-                batch_size=ppo_cfg.BATCH_SIZE,
-                n_epochs=ppo_cfg.N_EPOCHS,
-                gamma=ppo_cfg.GAMMA,
-                gae_lambda=ppo_cfg.GAE_LAMBDA,
-                clip_range=ppo_cfg.CLIP_RANGE,
-                ent_coef=ppo_cfg.ENT_COEF,
-                verbose=ppo_cfg.VERBOSE,
-                policy_kwargs=ppo_cfg.POLICY_KWARGS,
-                tensorboard_log=ppo_cfg.TENSORBOARD_LOG
-            )
-            
-        model.learn(
-            total_timesteps=time_steps,
-            reset_num_timesteps=False,
-            tb_log_name=f"PPO_vs_{opponent_name}"
-        )
-        model.save(model_path)
-        print(f"Modello PPO salvato in {model_path}")
-
+        model.set_random_seed(SEED)
     else:
-        raise ValueError(f"Algoritmo non supportato: {ALGORITHM}")
+        print(f"{Fore.CYAN}Create New DQN model (Config: {config_name})...{Style.RESET_ALL}")
+        model = DQN(
+            DQN_POLICY, 
+            env, 
+            verbose=1, 
+            seed=SEED,
+            tensorboard_log=tf_dir_path,
+            **config
+        )
+
+    start_time = time.time()
+    model.learn(
+        total_timesteps=total_timesteps, 
+        reset_num_timesteps=False, 
+        tb_log_name=ts_file_path
+    )
+    end_time = time.time()
+    print(f"DQN training ({config_name} vs {opponent_name}) finished in {end_time - start_time:.2f} s.")
+    
+    model.save(model_file_path)
+    print(f"DQN model saved in {model_file_path}")
+
+# --- PPO Training ---
+def train_ppo(config_name, opponent_class, who_am_i, first_move_random, total_timesteps):
+    print(f"{Fore.GREEN}--- Starting PPO Training [{config_name}] ---{Style.RESET_ALL}")
+
+    # Get opponent name
+    opponent_name = opponent_class(player_symbol=0).getName() if opponent_class else "N/A"
+    
+    # Check if config exist
+    try:
+        config = PPO_CONFIGS[config_name]
+    except KeyError:
+        print(f"{Fore.RED}Error: '{config_name}' NOT found in PPO.{Style.RESET_ALL}")
+        return
+
+    # Paths
+    model_file_path, tf_dir_path, ts_file_path, monitor_dir = create_paths("ppo", opponent_name, config_name)
+
+    #
+    class_name = opponent_class.__name__
+    model_to_load = None
+    if class_name == "DQNAgent" or class_name == "PPOAgent":
+        model_to_load = model_file_path
+
+    # Env
+    env = Connect4Env(opponent_class=opponent_class, who_am_i=who_am_i, first_move_random=first_move_random, model_path=model_to_load)
+    #env = Monitor(env, filename=monitor_dir)
+    #env = LogFirstActionWrapper(env)
+    env = ActionMasker(env, get_mask_from_env)
+    env = DummyVecEnv([lambda: env])
+
+    # --- Load/Create Model ---
+    if os.path.exists(model_file_path):
+        print(f"{Fore.CYAN}Load PPO model '{model_file_path}' ...{Style.RESET_ALL}")
+        model = MaskablePPO.load(
+            model_file_path, 
+            env = env,
+            tensorboard_log = tf_dir_path
+        )
+        model.set_random_seed(SEED)
+    else:
+        print(f"{Fore.CYAN}Create New PPO model (Config: {config_name})...{Style.RESET_ALL}")
+        model = MaskablePPO(
+            PPO_POLICY, 
+            env, 
+            verbose=1, 
+            seed=SEED,
+            tensorboard_log=tf_dir_path,
+            **config
+        )
+
+    start_time = time.time()
+    model.learn(
+        total_timesteps=total_timesteps, 
+        reset_num_timesteps=False, 
+        tb_log_name=ts_file_path
+    )
+    end_time = time.time()
+    print(f"PPO training ({config_name} vs {opponent_name}) finished in {end_time - start_time:.2f} s.")
+    
+    model.save(model_file_path)
+    print(f"PPO model saved in {model_file_path}")
+
+# --- PPO No Mask Training ---
+def train_ppo2(config_name, opponent_class, who_am_i, first_move_random, total_timesteps):
+    print(f"{Fore.GREEN}--- Starting PPO Training [{config_name}] ---{Style.RESET_ALL}")
+
+    # Get opponent name
+    opponent_name = opponent_class(player_symbol=0).getName() if opponent_class else "N/A"
+    
+    # Check if config exist
+    try:
+        config = PPO_CONFIGS[config_name]
+    except KeyError:
+        print(f"{Fore.RED}Error: '{config_name}' NOT found in PPO.{Style.RESET_ALL}")
+        return
+
+    # Paths
+    model_file_path, tf_dir_path, ts_file_path, monitor_dir = create_paths("ppo", opponent_name, config_name)
+
+    #
+    class_name = opponent_class.__name__
+    model_to_load = None
+    if class_name == "DQNAgent" or class_name == "PPOAgent":
+        model_to_load = model_file_path
+
+    # Env
+    env = Connect4Env(opponent_class=opponent_class, who_am_i=who_am_i, first_move_random=first_move_random, model_path=model_to_load)
+    env = Monitor(env, filename=monitor_dir)
+    env = LogFirstActionWrapper(env)
+    env = DummyVecEnv([lambda: env])
+
+    # --- Load/Create Model ---
+    if os.path.exists(model_file_path):
+        print(f"{Fore.CYAN}Load PPO model '{model_file_path}' ...{Style.RESET_ALL}")
+        model = PPO.load(
+            model_file_path, 
+            env = env,
+            tensorboard_log = tf_dir_path
+        )
+        model.set_random_seed(SEED)
+    else:
+        print(f"{Fore.CYAN}Create New PPO model (Config: {config_name})...{Style.RESET_ALL}")
+        model = PPO(
+            DQN_POLICY, 
+            env, 
+            verbose=1, 
+            seed=SEED,
+            tensorboard_log=tf_dir_path,
+            **config
+        )
+
+    start_time = time.time()
+    model.learn(
+        total_timesteps=total_timesteps, 
+        reset_num_timesteps=False, 
+        tb_log_name=ts_file_path
+    )
+    end_time = time.time()
+    print(f"PPO training ({config_name} vs {opponent_name}) finished in {end_time - start_time:.2f} s.")
+    
+    model.save(model_file_path)
+    print(f"PPO model saved in {model_file_path}")
 
 
-BASE_LOG_DIR = "./logs"
-BASE_IMAGE_DIR = os.path.join(BASE_LOG_DIR, "images")
-if not os.path.exists(BASE_LOG_DIR):
-        os.makedirs(BASE_LOG_DIR)
-if not os.path.exists(BASE_IMAGE_DIR):
-    os.makedirs(BASE_IMAGE_DIR)
 
-# --- Curriculum di Training ---
-ALGORITHM = "PPO"  # "DQN" o "PPO"
-train_ai(ALGORITHM, 50_000, RandomAgent, True, 1)
-train_ai(ALGORITHM, 50_000, RandomAgent, False, 1)
-train_ai(ALGORITHM, 150_000, RuleBasedL1Agent, True, 1)
-train_ai(ALGORITHM, 150_000, RuleBasedL1Agent, False, 1)
-train_ai(ALGORITHM, 225_000, RuleBasedL2Agent, True, 1)
-train_ai(ALGORITHM, 225_000, RuleBasedL2Agent, False, 1)
-run_match(PPOAgent, RandomAgent)
-run_match(PPOAgent, RuleBasedL1Agent)
-run_match(PPOAgent, RuleBasedL2Agent)
+if __name__ == "__main__":
+    # --- Curriculum per DQN ---
+    # CONFIG_DQN = "config_5"
+    # train_dqn(CONFIG_DQN, RandomAgent, 1, False, 100_000)
+    # train_dqn(CONFIG_DQN, RuleBasedL1_2Agent, 1, False, 150_000)
+    # train_dqn(CONFIG_DQN, RuleBasedL2Agent, 1, False, 350_000)
+    # # train_dqn(CONFIG_DQN, DQNAgent, 1, False, 100_000) #In DQNAgent ricorda di camnbiare nome modello  100k*2
+
+    # --- Curriculum per PPO ---
+    CONFIG_PPO = "config_6"
+    train_ppo2(CONFIG_PPO, RandomAgent, 1, False, 100_000)
+    train_ppo2(CONFIG_PPO, RuleBasedL1_2Agent, 1, False, 150_000)
+    train_ppo2(CONFIG_PPO, RuleBasedL2Agent, 1, False, 350_000)
